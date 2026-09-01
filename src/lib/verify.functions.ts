@@ -93,25 +93,22 @@ export const verifyDocument = createServerFn({ method: "POST" })
       .parse(data),
   )
   .handler(async ({ data }): Promise<DocVerdict> => {
-    const apiKey = process.env["LOVABLE_API_KEY"];
+    const apiKey = process.env["GEMINI_API_KEY"];
     if (!apiKey) throw new Error("AI is not configured for this project.");
 
-    const isPdf = data.file.mimeType === "application/pdf";
-    const media = isPdf
-      ? { type: "file", file: { filename: data.file.name, file_data: data.file.dataUrl } }
-      : { type: "image_url", image_url: { url: data.file.dataUrl } };
+    const b64Parts = data.file.dataUrl.split(",");
+    const mimeType = b64Parts[0].split(":")[1].split(";")[0];
+    const b64Data = b64Parts[1];
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-3.7-flash",
-        messages: [
+        contents: [
           {
             role: "user",
-            content: [
+            parts: [
               {
-                type: "text",
                 text: `You are a strict document verification officer for the application: "${data.serviceName || "general application"}".
 
 Checklist slot being filled: "${data.requirementName}"${
@@ -133,11 +130,11 @@ Do a genuine, field-by-field read of the attached document:
 Return ONLY minified JSON matching:
 ${RESULT_SHAPE}`,
               },
-              media,
+              { inlineData: { mimeType, data: b64Data } },
             ],
           },
         ],
-        response_format: { type: "json_object" },
+        generationConfig: { responseMimeType: "application/json" },
       }),
     });
 
@@ -145,8 +142,8 @@ ${RESULT_SHAPE}`,
     if (res.status === 402) throw new Error("AI credits exhausted for this workspace.");
     if (!res.ok) throw new Error(`Verification failed (${res.status}): ${await res.text()}`);
 
-    const json = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-    const raw = json.choices?.[0]?.message?.content ?? "{}";
+    const json = await res.json() as any;
+    const raw = json.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
     const cleaned = raw
       .replace(/^```(?:json)?/i, "")
       .replace(/```$/, "")

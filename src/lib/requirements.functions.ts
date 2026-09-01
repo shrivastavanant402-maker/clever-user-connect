@@ -33,19 +33,43 @@ const SHAPE = `{
   "notes": string[]
 }`;
 
-const gateway = async (body: unknown) => {
-  const apiKey = process.env["LOVABLE_API_KEY"];
+const gateway = async (body: any) => {
+  const apiKey = process.env["GEMINI_API_KEY"];
   if (!apiKey) throw new Error("AI is not configured for this project.");
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  
+  const geminiBody = {
+    contents: body.messages.map((m: any) => ({
+      role: m.role === "user" ? "user" : "model",
+      parts: Array.isArray(m.content)
+        ? m.content.map((c: any) => {
+            if (c.type === "text") return { text: c.text };
+            if (c.type === "image_url") {
+              const b64Parts = c.image_url.url.split(",");
+              const mime = b64Parts[0].split(":")[1].split(";")[0];
+              return { inlineData: { mimeType: mime, data: b64Parts[1] } };
+            }
+            if (c.type === "file") {
+              const b64Parts = c.file.file_data.split(",");
+              const mime = b64Parts[0].split(":")[1].split(";")[0];
+              return { inlineData: { mimeType: mime, data: b64Parts[1] } };
+            }
+            return { text: "" };
+          })
+        : [{ text: m.content }]
+    })),
+    generationConfig: body.response_format?.type === "json_object" ? { responseMimeType: "application/json" } : undefined
+  };
+
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${body.model}:generateContent?key=${apiKey}`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(geminiBody),
   });
   if (res.status === 429) throw new Error("Rate limit reached. Please retry in a moment.");
   if (res.status === 402) throw new Error("AI credits exhausted for this workspace.");
   if (!res.ok) throw new Error(`Request failed (${res.status}): ${await res.text()}`);
-  const json = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-  const raw = json.choices?.[0]?.message?.content ?? "{}";
+  const json = await res.json() as any;
+  const raw = json.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
   const cleaned = raw
     .replace(/^```(?:json)?/i, "")
     .replace(/```$/, "")
@@ -78,7 +102,7 @@ export const getServiceRequirements = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }): Promise<ServiceRequirements> => {
     const parsed = (await gateway({
-      model: "google/gemini-3.7-flash",
+      model: "gemini-3.6-flash",
       messages: [
         {
           role: "user",
@@ -112,7 +136,7 @@ export const scanFormRequirements = createServerFn({ method: "POST" })
       : { type: "image_url", image_url: { url: data.file.dataUrl } };
 
     const parsed = (await gateway({
-      model: "google/gemini-3.7-flash",
+      model: "gemini-3.6-flash",
       messages: [
         {
           role: "user",
