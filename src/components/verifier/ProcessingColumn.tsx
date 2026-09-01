@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   XCircle,
   Lightbulb,
+  PenLine,
   ShieldAlert,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
