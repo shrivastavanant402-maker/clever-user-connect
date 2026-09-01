@@ -29,6 +29,8 @@ export type DocVerdict = {
   expiryDate: string | null;
   quality: "good" | "poor" | "unreadable";
   tamperingSuspected: boolean;
+  tamperingRisk: "none" | "low" | "medium" | "high";
+  tamperingFindings: string[];
   handwrittenEntries: string[];
   incompleteFields: string[];
   signaturePresent: boolean;
@@ -54,6 +56,8 @@ const RESULT_SHAPE = `{
   "expiryDate": string | null,
   "quality": "good" | "poor" | "unreadable",
   "tamperingSuspected": boolean,
+  "tamperingRisk": "none" | "low" | "medium" | "high",
+  "tamperingFindings": string[] (each concrete forensic observation with its location on the document, e.g. "date of birth digits use a different font weight than the rest of the line"),
   "handwrittenEntries": string[] (labels of fields filled in by hand),
   "incompleteFields": string[] (mandatory fields left blank or partially filled),
   "signaturePresent": boolean,
