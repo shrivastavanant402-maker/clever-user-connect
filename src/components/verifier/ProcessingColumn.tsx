@@ -104,19 +104,79 @@ export function ProcessingColumn({
               <Icon className={`h-4 w-4 ${cls}`} />
               <span className="font-medium">{doc.name}</span>
               <Badge variant="secondary">{v.detectedType || "Unknown type"}</Badge>
+              {v.formIdentifier && <Badge variant="secondary">{v.formIdentifier}</Badge>}
               <span className={`text-xs ${cls}`}>{v.status}</span>
               <span className="ml-auto text-xs text-muted-foreground">{v.confidence}% confidence</span>
             </div>
 
+            {(v.issuingAuthority || v.isGovernmentForm) && (
+              <p className="text-xs text-muted-foreground">
+                {v.isGovernmentForm ? "Filled government form" : "Issued document"}
+                {v.issuingAuthority ? ` — ${v.issuingAuthority}` : ""}
+                {` · signature ${v.signaturePresent ? "present" : "missing"} · stamp ${v.stampPresent ? "present" : "missing"}`}
+              </p>
+            )}
+
             {v.extractedFields.length > 0 && (
-              <dl className="grid gap-x-6 gap-y-1 text-xs sm:grid-cols-2">
+              <ul className="divide-y divide-border rounded-lg border border-border text-xs">
                 {v.extractedFields.map((f) => (
-                  <div key={f.label} className="flex gap-2">
-                    <dt className="text-muted-foreground">{f.label}:</dt>
-                    <dd className="min-w-0 truncate">{f.value}</dd>
-                  </div>
+                  <li key={f.label} className="flex flex-wrap items-center gap-2 px-3 py-2">
+                    <span className="text-muted-foreground">{f.label}</span>
+                    <span className="min-w-0 flex-1 truncate">{f.value || "—"}</span>
+                    {f.entryMode === "handwritten" && (
+                      <span className="flex items-center gap-1 rounded-full bg-warning/15 px-2 py-0.5 text-[10px] text-warning">
+                        <PenLine className="h-3 w-3" /> handwritten
+                      </span>
+                    )}
+                    {f.entryMode === "stamped" && (
+                      <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px]">stamped</span>
+                    )}
+                    <span
+                      className={`text-[10px] ${
+                        f.status === "ok"
+                          ? "text-success"
+                          : f.status === "missing" || f.status === "invalid"
+                            ? "text-destructive"
+                            : "text-warning"
+                      }`}
+                      title={f.note}
+                    >
+                      {f.status}
+                    </span>
+                  </li>
                 ))}
-              </dl>
+              </ul>
+            )}
+
+            {v.requirementChecks.length > 0 && (
+              <ul className="space-y-1 text-xs">
+                {v.requirementChecks.map((c) => (
+                  <li key={c.requirement} className="flex gap-2">
+                    {c.met ? (
+                      <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success" />
+                    ) : (
+                      <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-destructive" />
+                    )}
+                    <span>
+                      {c.requirement}
+                      {c.evidence && <span className="text-muted-foreground"> — {c.evidence}</span>}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {v.incompleteFields.length > 0 && (
+              <p className="rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                Incomplete: {v.incompleteFields.join(", ")}
+              </p>
+            )}
+
+            {v.handwrittenEntries.length > 0 && (
+              <p className="flex items-start gap-2 rounded-lg bg-warning/10 px-3 py-2 text-xs text-warning">
+                <PenLine className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                Handwritten entries detected: {v.handwrittenEntries.join(", ")}
+              </p>
             )}
 
             {v.tamperingSuspected && (
@@ -135,6 +195,7 @@ export function ProcessingColumn({
                 ))}
               </ul>
             )}
+
 
             <div className="rounded-lg bg-secondary/40 p-3">
               <p className="flex items-center gap-2 text-xs font-semibold">
