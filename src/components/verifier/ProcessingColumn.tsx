@@ -7,10 +7,12 @@ import {
   PenLine,
   ShieldAlert,
   Sparkles,
+  Fingerprint,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import type { FeedEvent, SlotState } from "@/lib/upload-state";
 import type { RequiredDoc } from "@/lib/requirements.functions";
+import { BlockchainPanel } from "./BlockchainPanel";
 
 const toneClass: Record<FeedEvent["tone"], string> = {
   info: "text-[#6b7280]",
@@ -228,6 +230,22 @@ export function ProcessingColumn({
                   </li>
                 ))}
               </ul>
+            )}
+
+            {v.documentHash && (
+              <div className="rounded-xl bg-[#faf9f7] border border-[#eae8e3] p-3.5">
+                <p className="flex items-center gap-1.5 text-xs font-bold text-[#0a0a0a]">
+                  <Fingerprint className="h-3.5 w-3.5 text-[#0a0a0a]" /> Document Integrity
+                </p>
+                <div className="mt-2 space-y-1 text-xs text-[#6b7280]">
+                  <p>SHA-256</p>
+                  <p className="font-mono truncate text-[10px] text-[#0a0a0a]">{v.documentHash}</p>
+                  <p className="mt-1.5 text-emerald-600 flex items-center gap-1 font-semibold">
+                    <CheckCircle2 className="h-3 w-3" /> Fingerprint generated
+                  </p>
+                </div>
+                <BlockchainPanel documentHash={v.documentHash} documentName={doc.name} />
+              </div>
             )}
 
             <div className="rounded-xl bg-[#faf9f7] border border-[#eae8e3] p-3.5">

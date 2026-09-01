@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { calculateSHA256 } from "./crypto";
 
 export type ExtractedField = {
   label: string;
@@ -41,6 +42,7 @@ export type DocVerdict = {
   fixSteps: string[];
   requirementChecks: RequirementCheck[];
   extractedFields: ExtractedField[];
+  documentHash?: string;
 };
 
 const RESULT_SHAPE = `{
@@ -96,9 +98,19 @@ export const verifyDocument = createServerFn({ method: "POST" })
     const apiKey = process.env["GEMINI_API_KEY"];
     if (!apiKey) throw new Error("AI is not configured for this project.");
 
+    if (!data.file?.dataUrl) throw new Error("No file data provided");
     const b64Parts = data.file.dataUrl.split(",");
     const mimeType = b64Parts[0]?.split(":")[1]?.split(";")[0] ?? "application/octet-stream";
     const b64Data = b64Parts[1] ?? "";
+    
+    if (!b64Data) throw new Error("Invalid base64 file data");
+
+    const binaryString = atob(b64Data);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    const documentHash = await calculateSHA256(bytes);
 
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, {
       method: "POST",
@@ -170,5 +182,6 @@ ${RESULT_SHAPE}`,
       note: f.note ?? "",
     }));
     parsed.confidence = Math.max(0, Math.min(100, Math.round(parsed.confidence ?? 0)));
+    parsed.documentHash = documentHash;
     return parsed;
   });
