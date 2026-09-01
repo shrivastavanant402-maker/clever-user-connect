@@ -1,106 +1,96 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-const fileSchema = z.object({
-  name: z.string(),
-  mimeType: z.string(),
-  dataUrl: z.string(),
-});
-
-const inputSchema = z.object({
-  applicantName: z.string().default(""),
-  requiredDocs: z.array(z.string()).min(1),
-  files: z.array(fileSchema).min(1).max(8),
-  language: z.string().default("English"),
-});
-
-export type DocFinding = {
-  fileName: string;
-  detectedType: string;
-  matchedRequirement: string | null;
+export type DocVerdict = {
   status: "verified" | "warning" | "rejected";
-  issues: string[];
+  detectedType: string;
+  matchesRequirement: boolean;
   extractedName: string | null;
   documentNumber: string | null;
+  issueDate: string | null;
   expiryDate: string | null;
   quality: "good" | "poor" | "unreadable";
+  tamperingSuspected: boolean;
   confidence: number;
-  explanation: string;
-};
-
-export type VerificationResult = {
-  findings: DocFinding[];
-  missing: string[];
-  duplicates: string[];
-  readiness: number;
-  summary: string;
-  nextActions: string[];
+  issues: string[];
+  insight: string;
+  fixSteps: string[];
+  extractedFields: Array<{ label: string; value: string }>;
 };
 
 const RESULT_SHAPE = `{
-  "findings": [{
-    "fileName": string,
-    "detectedType": string,
-    "matchedRequirement": string | null,
-    "status": "verified" | "warning" | "rejected",
-    "issues": string[],
-    "extractedName": string | null,
-    "documentNumber": string | null,
-    "expiryDate": string | null,
-    "quality": "good" | "poor" | "unreadable",
-    "confidence": number,
-    "explanation": string
-  }],
-  "missing": string[],
-  "duplicates": string[],
-  "readiness": number,
-  "summary": string,
-  "nextActions": string[]
+  "status": "verified" | "warning" | "rejected",
+  "detectedType": string,
+  "matchesRequirement": boolean,
+  "extractedName": string | null,
+  "documentNumber": string | null,
+  "issueDate": string | null,
+  "expiryDate": string | null,
+  "quality": "good" | "poor" | "unreadable",
+  "tamperingSuspected": boolean,
+  "confidence": number (0-100),
+  "issues": string[],
+  "insight": string (why it passed or failed, in plain language, referencing what was actually read),
+  "fixSteps": string[] (concrete actions the applicant should take; empty if verified),
+  "extractedFields": [{ "label": string, "value": string }]
 }`;
 
-export const verifyDocuments = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => inputSchema.parse(data))
-  .handler(async ({ data }): Promise<VerificationResult> => {
+export const verifyDocument = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        requirementName: z.string(),
+        requirementDescription: z.string().default(""),
+        applicantName: z.string().default(""),
+        serviceName: z.string().default(""),
+        language: z.string().default("English"),
+        today: z.string().default(""),
+        file: z.object({ name: z.string(), mimeType: z.string(), dataUrl: z.string() }),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data }): Promise<DocVerdict> => {
     const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) throw new Error("AI is not configured for this project.");
 
-    const content: Array<Record<string, unknown>> = [
-      {
-        type: "text",
-        text: `You are a document verification engine for business-service applications.
-
-Applicant name on the application: ${data.applicantName || "(not provided)"}
-Required documents checklist: ${data.requiredDocs.join(", ")}
-
-For EVERY uploaded image below (they are given in the same order as this list: ${data.files
-          .map((f) => f.name)
-          .join(", ")}):
-1. Read the document (OCR) and classify its type.
-2. Match it to one checklist item, or null if it matches none (then status must be "rejected" with issue "Incorrect document type").
-3. Detect: expiry in the past (expired), poor/blurred/cropped scans, name mismatch vs the applicant name, missing critical fields.
-4. Flag near-identical documents uploaded twice in "duplicates".
-5. status: "verified" = usable, "warning" = usable but has an issue (name mismatch, low quality, expiring soon), "rejected" = unusable/wrong/expired.
-6. confidence is 0-100. readiness is 0-100 = share of checklist items satisfied by verified docs, minus penalties for warnings.
-7. Write explanation and summary in ${data.language}. Be concise and specific, referencing what you actually read.
-
-Return ONLY minified JSON matching:
-${RESULT_SHAPE}`,
-      },
-    ];
-
-    for (const f of data.files) {
-      content.push({ type: "image_url", image_url: { url: f.dataUrl } });
-    }
+    const isPdf = data.file.mimeType === "application/pdf";
+    const media = isPdf
+      ? { type: "file", file: { filename: data.file.name, file_data: data.file.dataUrl } }
+      : { type: "image_url", image_url: { url: data.file.dataUrl } };
 
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [{ role: "user", content }],
+        model: "google/gemini-3.7-flash",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `You are a strict document verification officer for the application: "${data.serviceName || "general application"}".
+
+Checklist slot being filled: "${data.requirementName}"${
+                  data.requirementDescription ? ` — ${data.requirementDescription}` : ""
+                }
+Applicant name on the application: ${data.applicantName || "(not provided)"}
+Today's date: ${data.today || "unknown"}
+
+Do a genuine read of the attached document:
+1. OCR every legible field and classify the document type.
+2. Decide if it actually satisfies the checklist slot (wrong type => matchesRequirement false, status "rejected").
+3. Check expiry against today, scan quality (blur, glare, cropped edges, low resolution), completeness of critical fields, name match with the applicant, and visual signs of tampering (mismatched fonts, misaligned text, edited numbers, digital artefacts). Never invent data you cannot read.
+4. status: "verified" = accept as-is, "warning" = usable but flagged, "rejected" = must be replaced.
+5. Write insight and fixSteps in ${data.language}, concise and specific.
+
+Return ONLY minified JSON matching:
+${RESULT_SHAPE}`,
+              },
+              media,
+            ],
+          },
+        ],
         response_format: { type: "json_object" },
       }),
     });
@@ -111,19 +101,21 @@ ${RESULT_SHAPE}`,
 
     const json = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
     const raw = json.choices?.[0]?.message?.content ?? "{}";
-    const cleaned = raw.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+    const cleaned = raw
+      .replace(/^```(?:json)?/i, "")
+      .replace(/```$/, "")
+      .trim();
 
-    let parsed: VerificationResult;
+    let parsed: DocVerdict;
     try {
-      parsed = JSON.parse(cleaned) as VerificationResult;
+      parsed = JSON.parse(cleaned) as DocVerdict;
     } catch {
       throw new Error("Could not read the AI response. Please try again.");
     }
 
-    parsed.findings ??= [];
-    parsed.missing ??= [];
-    parsed.duplicates ??= [];
-    parsed.nextActions ??= [];
-    parsed.readiness = Math.max(0, Math.min(100, Math.round(parsed.readiness ?? 0)));
+    parsed.issues ??= [];
+    parsed.fixSteps ??= [];
+    parsed.extractedFields ??= [];
+    parsed.confidence = Math.max(0, Math.min(100, Math.round(parsed.confidence ?? 0)));
     return parsed;
   });
