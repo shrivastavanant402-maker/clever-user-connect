@@ -116,12 +116,15 @@ Checklist slot being filled: "${data.requirementName}"${
 Applicant name on the application: ${data.applicantName || "(not provided)"}
 Today's date: ${data.today || "unknown"}
 
-Do a genuine read of the attached document:
-1. OCR every legible field and classify the document type.
-2. Decide if it actually satisfies the checklist slot (wrong type => matchesRequirement false, status "rejected").
-3. Check expiry against today, scan quality (blur, glare, cropped edges, low resolution), completeness of critical fields, name match with the applicant, and visual signs of tampering (mismatched fonts, misaligned text, edited numbers, digital artefacts). Never invent data you cannot read.
-4. status: "verified" = accept as-is, "warning" = usable but flagged, "rejected" = must be replaced.
-5. Write insight and fixSteps in ${data.language}, concise and specific.
+Do a genuine, field-by-field read of the attached document:
+1. OCR every legible field (label + value) and classify the document type. If it is a filled government/application form, read every printed label and the value entered against it, including annexures, declarations, signature and stamp blocks.
+2. For each field set entryMode: "printed" (pre-printed or machine-filled), "handwritten" (filled in by hand — ink strokes, uneven baselines, cursive), "stamped", or "unknown". Flag every handwritten entry in handwrittenEntries, and mark any handwritten value that is hard to read as legible:false with status "illegible".
+3. Validate each field against the scheme's exact requirements: correct format (e.g. 10-char PAN, 12-digit Aadhaar, DD/MM/YYYY dates, PIN codes, IFSC), internal consistency (dates in order, age vs date of birth), name match with the applicant, and mandatory fields left blank (list them in incompleteFields, status "missing").
+4. Fill requirementChecks with one entry per specific rule implied by the checklist slot description, each with the evidence you actually read.
+5. Decide if the document satisfies the checklist slot (wrong type => matchesRequirement false, status "rejected").
+6. Check expiry against today, scan quality (blur, glare, cropped edges, low resolution), presence of signature and official stamp, and visual signs of tampering (mismatched fonts, misaligned text, overwritten or edited entries, digital artefacts). Never invent data you cannot read.
+7. status: "verified" = accept as-is, "warning" = usable but flagged (e.g. handwritten but legible entries, minor quality issues), "rejected" = must be replaced (wrong document, missing mandatory fields, expired, illegible, suspected tampering).
+8. Write insight, notes and fixSteps in ${data.language}, concise and specific.
 
 Return ONLY minified JSON matching:
 ${RESULT_SHAPE}`,
