@@ -1,372 +1,195 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
-import { useMutation } from "@tanstack/react-query";
-import { useRef, useState } from "react";
-import { toast } from "sonner";
-import {
-  ShieldCheck,
-  Search,
-  Loader2,
-  FileUp,
-  Languages,
-  ListChecks,
-  Sparkles,
-} from "lucide-react";
-
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { DocumentSlot } from "@/components/verifier/DocumentSlot";
-import { ProcessingColumn } from "@/components/verifier/ProcessingColumn";
-import { readLocalFile, ACCEPTED } from "@/lib/local-file";
-import type { FeedEvent, SlotState, Stage } from "@/lib/upload-state";
-import {
-  getServiceRequirements,
-  scanFormRequirements,
-  type ServiceRequirements,
-} from "@/lib/requirements.functions";
-import { verifyDocument } from "@/lib/verify.functions";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ShieldCheck, Check, AlertTriangle, X, ChevronRight } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "DocuShield — Find & Verify Documents for Any Service" },
+      { title: "DocuShield — AI Document Verification for Every Service" },
       {
         name: "description",
         content:
-          "Search any scheme, licence or service to get its exact document checklist, then upload each document for live OCR, authenticity checks and AI insights on every failure.",
+          "Instantly verify any document for any government service. AI-powered OCR, authenticity checks, and smart insights — all in one place.",
       },
-      { property: "og:title", content: "DocuShield — Document Checker for Every Application" },
+      { property: "og:title", content: "DocuShield — AI Document Verification" },
       {
         property: "og:description",
         content:
-          "Search a service or scan the form, get the required document list, and verify each upload in real time with AI insights.",
+          "Search any service, get the exact document checklist, and verify each upload with AI in real time.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: Home,
+  component: LandingPage,
 });
 
-const LANGUAGES = ["English", "Hindi", "Marathi", "Tamil", "Bengali", "Gujarati"];
-const EXAMPLES = ["Passport (fresh, adult)", "PAN card", "Driving licence renewal", "PM Kisan scheme"];
-
-const now = () =>
-  new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-
-function Home() {
-  const [query, setQuery] = useState("");
-  const [language, setLanguage] = useState("English");
-  const [applicantName, setApplicantName] = useState("");
-  const [requirements, setRequirements] = useState<ServiceRequirements | null>(null);
-  const [slots, setSlots] = useState<Record<string, SlotState>>({});
-  const [events, setEvents] = useState<FeedEvent[]>([]);
-  const [digilockerOpen, setDigilockerOpen] = useState(false);
-  const formInputRef = useRef<HTMLInputElement>(null);
-
-  const searchFn = useServerFn(getServiceRequirements);
-  const scanFn = useServerFn(scanFormRequirements);
-  const verifyFn = useServerFn(verifyDocument);
-
-  const log = (docName: string, message: string, tone: FeedEvent["tone"] = "info") =>
-    setEvents((prev) =>
-      [{ id: `${Date.now()}-${Math.random()}`, time: now(), docName, message, tone }, ...prev].slice(
-        0,
-        60,
-      ),
-    );
-
-  const applyRequirements = (r: ServiceRequirements) => {
-    setRequirements(r);
-    setSlots({});
-    setEvents([]);
-    toast.success(`${r.documents.length} documents required for ${r.serviceName}`);
-  };
-
-  const search = useMutation({
-    mutationFn: () => searchFn({ data: { query, language } }),
-    onSuccess: applyRequirements,
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const scanForm = useMutation({
-    mutationFn: async (file: File) => {
-      const local = await readLocalFile(file);
-      return scanFn({
-        data: {
-          language,
-          file: { name: local.name, mimeType: local.mimeType, dataUrl: local.dataUrl },
-        },
-      });
-    },
-    onSuccess: (r) => {
-      setQuery(r.serviceName);
-      applyRequirements(r);
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const setStage = (docId: string, stage: Stage, patch: Partial<SlotState> = {}) =>
-    setSlots((prev) => (prev[docId] ? { ...prev, [docId]: { ...prev[docId], stage, ...patch } } : prev));
-
-  const handlePick = async (docId: string, file: File) => {
-    const doc = requirements?.documents.find((d) => d.id === docId);
-    if (!doc) return;
-    const local = await readLocalFile(file);
-    setSlots((prev) => ({ ...prev, [docId]: { file: local, stage: "reading", source: "upload" } }));
-    log(doc.name, `Received ${local.name}`);
-
-    const t1 = setTimeout(() => {
-      setStage(docId, "ocr");
-      log(doc.name, "Running OCR on the scan…");
-    }, 400);
-    const t2 = setTimeout(() => {
-      setStage(docId, "classify");
-      log(doc.name, "Classifying document type…");
-    }, 1400);
-    const t3 = setTimeout(() => {
-      setStage(docId, "validate");
-      log(doc.name, "Checking expiry, quality, name match and tampering…");
-    }, 2600);
-
-    try {
-      const verdict = await verifyFn({
-        data: {
-          requirementName: doc.name,
-          requirementDescription: doc.description,
-          applicantName,
-          serviceName: requirements?.serviceName ?? "",
-          language,
-          today: new Date().toISOString().slice(0, 10),
-          file: { name: local.name, mimeType: local.mimeType, dataUrl: local.dataUrl },
-        },
-      });
-      [t1, t2, t3].forEach(clearTimeout);
-      setStage(docId, "done", { verdict });
-      log(
-        doc.name,
-        verdict.status === "verified"
-          ? `Verified as ${verdict.detectedType}`
-          : `${verdict.status === "warning" ? "Flagged" : "Rejected"}: ${verdict.issues[0] ?? verdict.insight}`,
-        verdict.status === "verified" ? "success" : verdict.status === "warning" ? "warning" : "error",
-      );
-    } catch (e) {
-      [t1, t2, t3].forEach(clearTimeout);
-      const message = e instanceof Error ? e.message : "Verification failed";
-      setStage(docId, "error", { error: message });
-      log(doc.name, message, "error");
-    }
-  };
-
-  const docs = requirements?.documents ?? [];
-
+/* ── Phone Mockup UI ── */
+function PhoneMockup() {
   return (
-    <main className="mx-auto w-full max-w-7xl px-5 pb-24 pt-8 sm:px-8">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <ShieldCheck className="h-6 w-6 text-primary" />
-          <span className="font-display text-lg font-semibold tracking-tight">DocuShield</span>
-        </div>
-        <span className="rounded-full border border-border bg-secondary/50 px-3 py-1 text-xs text-muted-foreground">
-          Team Innovative_Devs · Spiderverse Hackathon 2026
-        </span>
-      </header>
-
-      <section className="mx-auto mt-12 max-w-3xl text-center">
-        <p className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs text-primary">
-          <Sparkles className="h-3.5 w-3.5" /> AI document checker for any service or scheme
-        </p>
-        <h1 className="mt-5 text-4xl font-semibold leading-tight sm:text-5xl">
-          What are you <span className="text-gradient">applying for</span>?
-        </h1>
-        <p className="mt-3 text-muted-foreground">
-          Search the service to get its exact document checklist — or upload the application form and
-          we&apos;ll read it for you.
-        </p>
-
-        <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              className="h-12 pl-10"
-              placeholder="e.g. Apply for a new passport, GST registration, Ayushman Bharat card…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && query.trim().length > 1) search.mutate();
-              }}
-            />
+    <div className="landing-phone">
+      {/* Phone bezel */}
+      <div className="landing-phone__bezel">
+        {/* Status bar */}
+        <div className="landing-phone__status-bar">
+          <span className="landing-phone__time">9:41</span>
+          <div className="landing-phone__status-icons">
+            <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
+              <rect x="0" y="4" width="3" height="8" rx="1" fill="#0a0a0a" />
+              <rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#0a0a0a" />
+              <rect x="9" y="0.5" width="3" height="11.5" rx="1" fill="#0a0a0a" />
+              <rect x="13" y="3" width="3" height="9" rx="1" fill="#0a0a0a" opacity="0.3" />
+            </svg>
+            <svg width="18" height="12" viewBox="0 0 18 12" fill="none">
+              <rect x="0.5" y="0.5" width="15" height="9" rx="2" stroke="#0a0a0a" strokeWidth="1" />
+              <rect x="2" y="2" width="10" height="6" rx="1" fill="#0a0a0a" />
+              <rect x="16" y="3" width="2" height="4" rx="0.5" fill="#0a0a0a" />
+            </svg>
           </div>
-          <Button
-            size="lg"
-            className="h-12"
-            disabled={query.trim().length < 2 || search.isPending}
-            onClick={() => search.mutate()}
-          >
-            {search.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-            Find documents
-          </Button>
-          <Button
-            size="lg"
-            variant="secondary"
-            className="h-12"
-            disabled={scanForm.isPending}
-            onClick={() => formInputRef.current?.click()}
-          >
-            {scanForm.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileUp className="h-4 w-4" />}
-            Scan a form
-          </Button>
-          <input
-            ref={formInputRef}
-            type="file"
-            accept={ACCEPTED}
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) scanForm.mutate(f);
-              e.target.value = "";
-            }}
-          />
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground">
-          Try:
-          {EXAMPLES.map((ex) => (
-            <button
-              key={ex}
-              type="button"
-              className="rounded-full border border-border px-3 py-1 hover:border-primary/60 hover:text-foreground"
-              onClick={() => {
-                setQuery(ex);
-                search.mutate();
-              }}
-            >
-              {ex}
-            </button>
-          ))}
+        {/* App header */}
+        <div className="landing-phone__header">
+          <div className="landing-phone__header-back">
+            <ChevronRight size={16} style={{ transform: "rotate(180deg)" }} />
+          </div>
+          <div className="landing-phone__header-title">
+            <div className="landing-phone__header-avatar">
+              <ShieldCheck size={12} color="#fff" />
+            </div>
+            <span>DocuShield Verify</span>
+          </div>
+          <div className="landing-phone__header-dots">•••</div>
+        </div>
+
+        {/* Scrollable card area */}
+        <div className="landing-phone__body">
+          {/* Verified card */}
+          <div className="landing-phone__card landing-phone__card--verified">
+            <div className="landing-phone__card-top">
+              <div className="landing-phone__card-icon landing-phone__card-icon--green">
+                <Check size={14} color="#fff" />
+              </div>
+              <div className="landing-phone__card-info">
+                <span className="landing-phone__card-name">Passport</span>
+                <span className="landing-phone__card-sub">Verified · 2 sec ago</span>
+              </div>
+              <span className="landing-phone__card-badge landing-phone__card-badge--green">Verified</span>
+            </div>
+            <div className="landing-phone__card-details">
+              <div className="landing-phone__card-row">
+                <span className="landing-phone__card-label">Name match</span>
+                <span className="landing-phone__card-value landing-phone__card-value--pass">✓ Pass</span>
+              </div>
+              <div className="landing-phone__card-row">
+                <span className="landing-phone__card-label">Expiry</span>
+                <span className="landing-phone__card-value landing-phone__card-value--pass">✓ Valid until 2034</span>
+              </div>
+              <div className="landing-phone__card-row">
+                <span className="landing-phone__card-label">Tampering</span>
+                <span className="landing-phone__card-value landing-phone__card-value--pass">✓ None detected</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Warning card */}
+          <div className="landing-phone__card landing-phone__card--warning">
+            <div className="landing-phone__card-top">
+              <div className="landing-phone__card-icon landing-phone__card-icon--amber">
+                <AlertTriangle size={14} color="#fff" />
+              </div>
+              <div className="landing-phone__card-info">
+                <span className="landing-phone__card-name">Aadhaar Card</span>
+                <span className="landing-phone__card-sub">Flagged · needs review</span>
+              </div>
+              <span className="landing-phone__card-badge landing-phone__card-badge--amber">Warning</span>
+            </div>
+            <div className="landing-phone__card-details">
+              <div className="landing-phone__card-row">
+                <span className="landing-phone__card-label">Name match</span>
+                <span className="landing-phone__card-value landing-phone__card-value--pass">✓ Pass</span>
+              </div>
+              <div className="landing-phone__card-row">
+                <span className="landing-phone__card-label">Quality</span>
+                <span className="landing-phone__card-value landing-phone__card-value--warn">⚠ Low resolution</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Rejected card */}
+          <div className="landing-phone__card landing-phone__card--rejected">
+            <div className="landing-phone__card-top">
+              <div className="landing-phone__card-icon landing-phone__card-icon--red">
+                <X size={14} color="#fff" />
+              </div>
+              <div className="landing-phone__card-info">
+                <span className="landing-phone__card-name">PAN Card</span>
+                <span className="landing-phone__card-sub">Rejected · expired</span>
+              </div>
+              <span className="landing-phone__card-badge landing-phone__card-badge--red">Rejected</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Landing Page ── */
+function LandingPage() {
+  return (
+    <div className="landing">
+      {/* ── Floating pill navbar ── */}
+      <nav className="landing-nav" id="landing-nav">
+        <div className="landing-nav__inner">
+          {/* Logo + badge */}
+          <div className="landing-nav__logo">
+            <ShieldCheck size={22} strokeWidth={2.2} color="#0a0a0a" />
+            <span className="landing-nav__wordmark">DocuShield</span>
+            <span className="landing-nav__badge">BETA</span>
+          </div>
+
+          {/* Center links */}
+          <div className="landing-nav__links">
+            <Link to="/" className="landing-nav__link">Features</Link>
+            <Link to="/" className="landing-nav__link">How it works</Link>
+            <Link to="/" className="landing-nav__link">Pricing</Link>
+            <Link to="/" className="landing-nav__link">Docs</Link>
+          </div>
+
+          {/* CTA */}
+          <Link to="/app" className="landing-nav__cta" id="get-started-btn">
+            Get Started
+          </Link>
+        </div>
+      </nav>
+
+      {/* ── Hero section ── */}
+      <section className="landing-hero" id="hero-section">
+        <h1 className="landing-hero__headline">
+          Verify documents<br />for any service
+        </h1>
+        <p className="landing-hero__subtext">
+          Search any scheme, licence, or government service to get its exact document
+          checklist — then upload each one for{" "}
+          <strong>live AI verification</strong> with OCR, authenticity checks, and
+          smart insights on every result.
+        </p>
+
+        <div className="landing-hero__actions">
+          <Link to="/app" className="landing-hero__btn-primary" id="hero-cta-btn">
+            Start verifying — it's free
+            <ChevronRight size={16} />
+          </Link>
+          <span className="landing-hero__btn-secondary">
+            No sign-up required
+          </span>
+        </div>
+
+        {/* Phone mockup — bleeds off bottom */}
+        <div className="landing-hero__mockup-container">
+          <PhoneMockup />
         </div>
       </section>
-
-      <div className="mt-12 grid gap-6 lg:grid-cols-2">
-        <section className="panel p-6">
-          <h2 className="flex items-center gap-2 text-lg font-semibold">
-            <ListChecks className="h-4 w-4 text-primary" /> Required documents
-          </h2>
-
-          {!requirements ? (
-            <p className="mt-4 text-sm text-muted-foreground">
-              Search a service or scan a form above to build your checklist.
-            </p>
-          ) : (
-            <>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {requirements.serviceName} · {requirements.authority}
-              </p>
-              {requirements.overview && (
-                <p className="mt-3 rounded-lg bg-secondary/40 p-3 text-sm text-muted-foreground">
-                  {requirements.overview}
-                </p>
-              )}
-
-              <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="applicant">Applicant name</Label>
-                  <Input
-                    id="applicant"
-                    placeholder="Name as on the application"
-                    value={applicantName}
-                    onChange={(e) => setApplicantName(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <Languages className="h-4 w-4" /> Explanation language
-                  </Label>
-                  <Select value={language} onValueChange={setLanguage}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {LANGUAGES.map((l) => (
-                        <SelectItem key={l} value={l}>
-                          {l}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <ul className="mt-5 space-y-3">
-                {docs.map((doc) => (
-                  <DocumentSlot
-                    key={doc.id}
-                    doc={doc}
-                    slot={slots[doc.id]}
-                    onPick={(file) => void handlePick(doc.id, file)}
-                    onRemove={() =>
-                      setSlots((prev) => {
-                        const next = { ...prev };
-                        delete next[doc.id];
-                        return next;
-                      })
-                    }
-                    onDigilocker={() => setDigilockerOpen(true)}
-                  />
-                ))}
-              </ul>
-
-              {requirements.notes.length > 0 && (
-                <ul className="mt-5 space-y-1 text-xs text-muted-foreground">
-                  {requirements.notes.map((n) => (
-                    <li key={n}>• {n}</li>
-                  ))}
-                </ul>
-              )}
-            </>
-          )}
-        </section>
-
-        <ProcessingColumn docs={docs} slots={slots} events={events} />
-      </div>
-
-      <Dialog open={digilockerOpen} onOpenChange={setDigilockerOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ShieldCheck className="h-5 w-5 text-primary" /> Fetch from DigiLocker
-            </DialogTitle>
-            <DialogDescription>
-              DigiLocker issues documents only to registered partner applications. To enable one-tap
-              fetch here, DocuShield needs DigiLocker Partner API credentials (client ID, client
-              secret and a whitelisted redirect URL) from the Meri Pehchaan / DigiLocker partner
-              portal. Share those and we will wire the consent flow so issued documents arrive
-              pre-verified. Until then, download the document from your DigiLocker app and upload it
-              here — verification works exactly the same.
-            </DialogDescription>
-          </DialogHeader>
-        </DialogContent>
-      </Dialog>
-
-      <footer className="mt-20 border-t border-border pt-6 text-center text-xs text-muted-foreground">
-        Built by Team Innovative_Devs · Spiderverse Hackathon 2026 · Documents are analysed in memory
-        and never stored.
-      </footer>
-    </main>
+    </div>
   );
 }
