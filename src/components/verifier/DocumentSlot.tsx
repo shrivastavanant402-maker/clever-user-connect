@@ -24,7 +24,7 @@ export function DocumentSlot({
   onDigilocker,
 }: {
   doc: RequiredDoc;
-  slot?: SlotState;
+  slot?: SlotState | undefined;
   onPick: (file: File) => void;
   onRemove: () => void;
   onDigilocker: () => void;
