@@ -13,11 +13,16 @@ import {
   Cpu,
   Layers,
   ArrowRight,
-  Eye,
   CheckCircle2,
   Sparkles,
-  HelpCircle,
   ChevronDown,
+  FileText,
+  User,
+  ExternalLink,
+  RotateCw,
+  SlidersHorizontal,
+  Bell,
+  Smartphone,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -42,115 +47,181 @@ export const Route = createFileRoute("/")({
   component: LandingPage,
 });
 
-/* ── Phone Mockup UI ── */
+/* ── Realistic Full Mobile UI Mockup Component ── */
 function PhoneMockup() {
   return (
-    <div className="landing-phone">
-      <div className="landing-phone__bezel">
-        {/* Status bar */}
-        <div className="landing-phone__status-bar">
-          <span className="landing-phone__time">9:41</span>
-          <div className="landing-phone__status-icons">
-            <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
-              <rect x="0" y="4" width="3" height="8" rx="1" fill="#0a0a0a" />
-              <rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#0a0a0a" />
-              <rect x="9" y="0.5" width="3" height="11.5" rx="1" fill="#0a0a0a" />
-              <rect x="13" y="3" width="3" height="9" rx="1" fill="#0a0a0a" opacity="0.3" />
+    <div className="phone-wrapper">
+      {/* Glow shadow behind phone */}
+      <div className="phone-ambient-glow" />
+
+      {/* Phone Outer Chassis */}
+      <div className="phone-chassis">
+        {/* Dynamic Island & Speaker */}
+        <div className="phone-dynamic-island-container">
+          <span className="phone-status-time">9:41</span>
+          <div className="phone-dynamic-island">
+            <div className="phone-camera-lens" />
+            <div className="phone-sensor" />
+          </div>
+          <div className="phone-status-icons">
+            <svg width="15" height="11" viewBox="0 0 15 11" fill="none" className="inline-block">
+              <rect x="0.5" y="6.5" width="2" height="4" rx="0.5" fill="#0a0a0a" />
+              <rect x="4" y="4.5" width="2" height="6" rx="0.5" fill="#0a0a0a" />
+              <rect x="7.5" y="2.5" width="2" height="8" rx="0.5" fill="#0a0a0a" />
+              <rect x="11" y="0.5" width="2" height="10" rx="0.5" fill="#0a0a0a" />
             </svg>
-            <svg width="18" height="12" viewBox="0 0 18 12" fill="none">
-              <rect x="0.5" y="0.5" width="15" height="9" rx="2" stroke="#0a0a0a" strokeWidth="1" />
-              <rect x="2" y="2" width="10" height="6" rx="1" fill="#0a0a0a" />
-              <rect x="16" y="3" width="2" height="4" rx="0.5" fill="#0a0a0a" />
-            </svg>
+            <span className="text-[10px] font-bold text-[#0a0a0a]">5G</span>
+            <div className="phone-battery-icon">
+              <div className="phone-battery-level" />
+            </div>
           </div>
         </div>
 
-        {/* App header */}
-        <div className="landing-phone__header">
-          <div className="landing-phone__header-back">
-            <ChevronRight size={14} style={{ transform: "rotate(180deg)" }} />
-          </div>
-          <div className="landing-phone__header-title">
-            <div className="landing-phone__header-avatar">
-              <ShieldCheck size={13} color="#fff" />
+        {/* Screen Viewport */}
+        <div className="phone-screen">
+          {/* In-app Top Header */}
+          <div className="phone-app-header">
+            <div className="flex items-center gap-2">
+              <div className="phone-avatar-box">
+                <ShieldCheck size={14} className="text-white" />
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-[#0a0a0a]">DocuShield</span>
+                  <span className="phone-live-dot" />
+                </div>
+                <p className="text-[10px] font-medium text-[#6b7280]">Passport Seva · Track #8821</p>
+              </div>
             </div>
-            <span>DocuShield Live</span>
-          </div>
-          <div className="landing-phone__header-dots">•••</div>
-        </div>
-
-        {/* Scrollable card area */}
-        <div className="landing-phone__body">
-          {/* Verified card */}
-          <div className="landing-phone__card">
-            <div className="landing-phone__card-top">
-              <div className="landing-phone__card-icon landing-phone__card-icon--green">
-                <Check size={14} color="#fff" />
+            <div className="flex items-center gap-1">
+              <div className="phone-icon-btn">
+                <Bell size={12} className="text-[#0a0a0a]" />
               </div>
-              <div className="landing-phone__card-info">
-                <span className="landing-phone__card-name">Passport (Fresh)</span>
-                <span className="landing-phone__card-sub">Verified · 2 sec ago</span>
-              </div>
-              <span className="landing-phone__card-badge landing-phone__card-badge--green">
-                Verified
-              </span>
-            </div>
-            <div className="landing-phone__card-details">
-              <div className="landing-phone__card-row">
-                <span className="landing-phone__card-label">Name match</span>
-                <span className="landing-phone__card-value landing-phone__card-value--pass">✓ 100% Match</span>
-              </div>
-              <div className="landing-phone__card-row">
-                <span className="landing-phone__card-label">Expiry check</span>
-                <span className="landing-phone__card-value landing-phone__card-value--pass">✓ Valid until 2034</span>
-              </div>
-              <div className="landing-phone__card-row">
-                <span className="landing-phone__card-label">Tampering</span>
-                <span className="landing-phone__card-value landing-phone__card-value--pass">✓ Clean scan</span>
+              <div className="phone-icon-btn">
+                <SlidersHorizontal size={12} className="text-[#0a0a0a]" />
               </div>
             </div>
           </div>
 
-          {/* Warning card */}
-          <div className="landing-phone__card">
-            <div className="landing-phone__card-top">
-              <div className="landing-phone__card-icon landing-phone__card-icon--amber">
-                <AlertTriangle size={14} color="#fff" />
+          {/* Readiness Score Card */}
+          <div className="phone-readiness-banner">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#6b7280]">
+                  Application Status
+                </span>
+                <h4 className="text-sm font-extrabold text-[#0a0a0a]">2 of 3 Verified</h4>
               </div>
-              <div className="landing-phone__card-info">
-                <span className="landing-phone__card-name">Aadhaar Card</span>
-                <span className="landing-phone__card-sub">Flagged · needs review</span>
+              <div className="phone-score-pill">
+                <span className="text-xs font-extrabold text-emerald-700">85%</span>
+                <span className="text-[9px] text-[#6b7280]">Ready</span>
               </div>
-              <span className="landing-phone__card-badge landing-phone__card-badge--amber">
-                Warning
-              </span>
             </div>
-            <div className="landing-phone__card-details">
-              <div className="landing-phone__card-row">
-                <span className="landing-phone__card-label">Name match</span>
-                <span className="landing-phone__card-value landing-phone__card-value--pass">✓ Pass</span>
+            <div className="phone-progress-track">
+              <div className="phone-progress-fill" style={{ width: "85%" }} />
+            </div>
+            <p className="text-[10px] text-[#6b7280] flex items-center gap-1 mt-1.5">
+              <Sparkles size={10} className="text-[#0a0a0a]" /> 1 minor warning detected on Aadhaar
+            </p>
+          </div>
+
+          {/* Document Verification Cards List */}
+          <div className="phone-cards-scroll">
+            {/* Card 1: Verified Passport */}
+            <div className="phone-doc-card phone-doc-card--verified">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="phone-doc-thumb bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <Check size={14} />
+                  </div>
+                  <div>
+                    <h5 className="text-xs font-bold text-[#0a0a0a]">Passport (Fresh Adult)</h5>
+                    <p className="text-[10px] text-[#6b7280]">PDF · 1.4 MB · Issued 2024</p>
+                  </div>
+                </div>
+                <span className="phone-badge phone-badge--verified">
+                  Verified
+                </span>
               </div>
-              <div className="landing-phone__card-row">
-                <span className="landing-phone__card-label">Quality</span>
-                <span className="landing-phone__card-value landing-phone__card-value--warn">⚠ Low resolution</span>
+
+              <div className="phone-meta-grid">
+                <div className="phone-meta-item">
+                  <span className="phone-meta-label">Name Match</span>
+                  <span className="phone-meta-value text-emerald-700">✓ 100% Match</span>
+                </div>
+                <div className="phone-meta-item">
+                  <span className="phone-meta-label">Expiry Date</span>
+                  <span className="phone-meta-value text-emerald-700">✓ Valid to 2034</span>
+                </div>
+                <div className="phone-meta-item">
+                  <span className="phone-meta-label">Tamper Check</span>
+                  <span className="phone-meta-value text-emerald-700">✓ Authentic Seal</span>
+                </div>
+                <div className="phone-meta-item">
+                  <span className="phone-meta-label">OCR Confidence</span>
+                  <span className="phone-meta-value text-[#0a0a0a]">99.4%</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 2: Warning Aadhaar */}
+            <div className="phone-doc-card phone-doc-card--warning">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="phone-doc-thumb bg-amber-50 text-amber-700 border border-amber-200">
+                    <AlertTriangle size={13} />
+                  </div>
+                  <div>
+                    <h5 className="text-xs font-bold text-[#0a0a0a]">Aadhaar Card</h5>
+                    <p className="text-[10px] text-[#6b7280]">Address Proof · JPG · 820 KB</p>
+                  </div>
+                </div>
+                <span className="phone-badge phone-badge--warning">
+                  Review
+                </span>
+              </div>
+
+              <div className="phone-warning-box">
+                <p className="text-[10.5px] text-amber-900 leading-snug font-medium">
+                  <strong>Notice:</strong> Slight glare on bottom QR code. Address matches applicant record.
+                </p>
+                <div className="flex gap-1.5 mt-2">
+                  <button type="button" className="phone-action-btn-sm">
+                    <RotateCw size={10} /> Auto-Enhance
+                  </button>
+                  <button type="button" className="phone-action-btn-sm phone-action-btn-sm--ghost">
+                    Keep As-Is
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 3: Class X Marksheet */}
+            <div className="phone-doc-card phone-doc-card--verified">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="phone-doc-thumb bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <Check size={14} />
+                  </div>
+                  <div>
+                    <h5 className="text-xs font-bold text-[#0a0a0a]">Class X Certificate</h5>
+                    <p className="text-[10px] text-[#6b7280]">DOB Proof · DigiLocker Verified</p>
+                  </div>
+                </div>
+                <span className="phone-badge phone-badge--verified">
+                  Verified
+                </span>
               </div>
             </div>
           </div>
 
-          {/* Rejected card */}
-          <div className="landing-phone__card">
-            <div className="landing-phone__card-top">
-              <div className="landing-phone__card-icon landing-phone__card-icon--red">
-                <X size={14} color="#fff" />
-              </div>
-              <div className="landing-phone__card-info">
-                <span className="landing-phone__card-name">PAN Card</span>
-                <span className="landing-phone__card-sub">Rejected · expired</span>
-              </div>
-              <span className="landing-phone__card-badge landing-phone__card-badge--red">
-                Rejected
-              </span>
-            </div>
+          {/* Bottom Dock CTA inside phone */}
+          <div className="phone-dock">
+            <Link to="/app" className="phone-primary-action">
+              <span>Submit to Passport Seva</span>
+              <ArrowRight size={13} />
+            </Link>
+            <div className="phone-home-indicator" />
           </div>
         </div>
       </div>
@@ -185,17 +256,13 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
 
 /* ── Main Landing Page ── */
 function LandingPage() {
-  const [activeCategory, setActiveCategory] = useState<string>("All");
-
-  const categories = ["All", "Passport & Visa", "Tax & Business", "Driving & Transport", "Welfare Schemes"];
-
   const presets = [
-    { title: "Passport (Fresh Adult)", authority: "Passport Seva Kendra", docs: "4 docs required", link: "/app" },
-    { title: "Driving Licence Renewal", authority: "Parivahan / RTO", docs: "3 docs required", link: "/app" },
-    { title: "GST Registration", authority: "GSTN Portal", docs: "5 docs required", link: "/app" },
-    { title: "PM Kisan Samman Nidhi", authority: "Ministry of Agriculture", docs: "3 docs required", link: "/app" },
-    { title: "Ayushman Bharat Card", authority: "National Health Authority", docs: "2 docs required", link: "/app" },
-    { title: "PAN Card Correction", authority: "NSDL / Protean", docs: "4 docs required", link: "/app" },
+    { title: "Passport (Fresh Adult)", authority: "Passport Seva Kendra", docs: "4 docs required" },
+    { title: "Driving Licence Renewal", authority: "Parivahan / RTO", docs: "3 docs required" },
+    { title: "GST Registration", authority: "GSTN Portal", docs: "5 docs required" },
+    { title: "PM Kisan Samman Nidhi", authority: "Ministry of Agriculture", docs: "3 docs required" },
+    { title: "Ayushman Bharat Card", authority: "National Health Authority", docs: "2 docs required" },
+    { title: "PAN Card Correction", authority: "NSDL / Protean", docs: "4 docs required" },
   ];
 
   return (
@@ -256,14 +323,14 @@ function LandingPage() {
           </span>
         </div>
 
-        {/* Phone mockup — bleeds off bottom */}
-        <div className="landing-hero__mockup-container">
+        {/* Complete, High-Fidelity Phone Mockup */}
+        <div className="hero-phone-stage">
           <PhoneMockup />
         </div>
       </section>
 
       {/* ── Quick Sandbox Strip ── */}
-      <section className="relative z-10 mx-auto mt-40 max-w-5xl px-5">
+      <section className="mx-auto mt-20 max-w-5xl px-5">
         <div className="rounded-3xl border border-[#eae8e3] bg-white p-6 shadow-[0_4px_24px_rgba(0,0,0,0.04)]">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div>
