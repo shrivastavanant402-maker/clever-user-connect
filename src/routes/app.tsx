@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { useRef, useState } from "react";
@@ -11,6 +11,9 @@ import {
   Languages,
   ListChecks,
   Sparkles,
+  ArrowLeft,
+  CheckCircle2,
+  ExternalLink,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -44,13 +47,13 @@ import { verifyDocument } from "@/lib/verify.functions";
 export const Route = createFileRoute("/app")({
   head: () => ({
     meta: [
-      { title: "DocuShield — Find & Verify Documents for Any Service" },
+      { title: "DocuShield — Live Document Verification Hub" },
       {
         name: "description",
         content:
-          "Search any scheme, licence or service to get its exact document checklist, then upload each document for live OCR, authenticity checks and AI insights on every failure.",
+          "Search any government service or upload an application form. Live OCR, authenticity validation, and real-time AI compliance verification.",
       },
-      { property: "og:title", content: "DocuShield — Document Checker for Every Application" },
+      { property: "og:title", content: "DocuShield — Document Verification Hub" },
       {
         property: "og:description",
         content:
@@ -64,7 +67,13 @@ export const Route = createFileRoute("/app")({
 });
 
 const LANGUAGES = ["English", "Hindi", "Marathi", "Tamil", "Bengali", "Gujarati"];
-const EXAMPLES = ["Passport (fresh, adult)", "PAN card", "Driving licence renewal", "PM Kisan scheme"];
+const EXAMPLES = [
+  "Passport (fresh, adult)",
+  "PAN card correction",
+  "Driving licence renewal",
+  "PM Kisan scheme",
+  "GST registration",
+];
 
 const now = () =>
   new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
@@ -176,197 +185,265 @@ function AppPage() {
   const docs = requirements?.documents ?? [];
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-5 pb-24 pt-8 sm:px-8">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <ShieldCheck className="h-6 w-6 text-primary" />
-          <span className="font-display text-lg font-semibold tracking-tight">DocuShield</span>
+    <div className="min-h-screen bg-[#faf9f7] text-[#0a0a0a]">
+      {/* ── Floating Pill Navbar ── */}
+      <nav className="site-nav">
+        <div className="site-nav__inner">
+          <Link to="/" className="site-nav__logo">
+            <ShieldCheck size={22} strokeWidth={2.4} color="#0a0a0a" />
+            <span className="site-nav__wordmark">DocuShield</span>
+            <span className="site-nav__badge">VERIFIER</span>
+          </Link>
+
+          <div className="site-nav__links">
+            <Link to="/" className="site-nav__link">
+              Home
+            </Link>
+            <Link to="/app" className="site-nav__link site-nav__link--active">
+              Workspace
+            </Link>
+            <button
+              type="button"
+              onClick={() => setDigilockerOpen(true)}
+              className="site-nav__link"
+            >
+              DigiLocker
+            </button>
+          </div>
+
+          <Link to="/" className="site-nav__cta">
+            <ArrowLeft size={14} /> Back to Overview
+          </Link>
         </div>
-        <span className="rounded-full border border-border bg-secondary/50 px-3 py-1 text-xs text-muted-foreground">
-          Team Innovative_Devs · Spiderverse Hackathon 2026
-        </span>
-      </header>
+      </nav>
 
-      <section className="mx-auto mt-12 max-w-3xl text-center">
-        <p className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs text-primary">
-          <Sparkles className="h-3.5 w-3.5" /> AI document checker for any service or scheme
-        </p>
-        <h1 className="mt-5 text-4xl font-semibold leading-tight sm:text-5xl">
-          What are you <span className="text-gradient">applying for</span>?
-        </h1>
-        <p className="mt-3 text-muted-foreground">
-          Search the service to get its exact document checklist — or upload the application form and
-          we&apos;ll read it for you.
-        </p>
+      {/* ── App Content ── */}
+      <main className="mx-auto w-full max-w-6xl px-5 pb-28 pt-8">
+        {/* Search header card */}
+        <section className="mx-auto max-w-3xl text-center">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#eae8e3] bg-white px-3.5 py-1 text-xs font-semibold text-[#0a0a0a] shadow-xs">
+            <Sparkles className="h-3.5 w-3.5" /> Instant AI Checklist & Verification
+          </div>
 
-        <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              className="h-12 pl-10"
-              placeholder="e.g. Apply for a new passport, GST registration, Ayushman Bharat card…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && query.trim().length > 1) search.mutate();
+          <h1 className="mt-4 text-3xl font-extrabold tracking-tight sm:text-5xl text-[#0a0a0a]">
+            What are you applying for?
+          </h1>
+          <p className="mt-2.5 text-sm text-[#6b7280]">
+            Enter any scheme, license or service — or scan your application form directly.
+          </p>
+
+          <div className="mt-6 flex flex-col gap-2.5 sm:flex-row">
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9ca3af]" />
+              <Input
+                className="h-12 pl-10 rounded-full border-[#eae8e3] bg-white text-sm shadow-xs focus-visible:ring-1 focus-visible:ring-[#0a0a0a]"
+                placeholder="e.g. Apply for a new passport, GST registration, Ayushman Bharat card…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && query.trim().length > 1) search.mutate();
+                }}
+              />
+            </div>
+            <Button
+              size="lg"
+              className="h-12 rounded-full bg-[#0a0a0a] text-white hover:bg-[#262626] font-semibold px-6 shadow-xs"
+              disabled={query.trim().length < 2 || search.isPending}
+              onClick={() => search.mutate()}
+            >
+              {search.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+              Find documents
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="h-12 rounded-full border-[#eae8e3] bg-white text-[#0a0a0a] hover:bg-[#f4f3ef] font-semibold px-5 shadow-xs"
+              disabled={scanForm.isPending}
+              onClick={() => formInputRef.current?.click()}
+            >
+              {scanForm.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileUp className="h-4 w-4" />}
+              Scan a form
+            </Button>
+            <input
+              ref={formInputRef}
+              type="file"
+              accept={ACCEPTED}
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) scanForm.mutate(f);
+                e.target.value = "";
               }}
             />
           </div>
-          <Button
-            size="lg"
-            className="h-12"
-            disabled={query.trim().length < 2 || search.isPending}
-            onClick={() => search.mutate()}
-          >
-            {search.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-            Find documents
-          </Button>
-          <Button
-            size="lg"
-            variant="secondary"
-            className="h-12"
-            disabled={scanForm.isPending}
-            onClick={() => formInputRef.current?.click()}
-          >
-            {scanForm.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileUp className="h-4 w-4" />}
-            Scan a form
-          </Button>
-          <input
-            ref={formInputRef}
-            type="file"
-            accept={ACCEPTED}
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) scanForm.mutate(f);
-              e.target.value = "";
-            }}
-          />
-        </div>
 
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground">
-          Try:
-          {EXAMPLES.map((ex) => (
-            <button
-              key={ex}
-              type="button"
-              className="rounded-full border border-border px-3 py-1 hover:border-primary/60 hover:text-foreground"
-              onClick={() => {
-                setQuery(ex);
-                search.mutate();
-              }}
-            >
-              {ex}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <div className="mt-12 grid gap-6 lg:grid-cols-2">
-        <section className="panel p-6">
-          <h2 className="flex items-center gap-2 text-lg font-semibold">
-            <ListChecks className="h-4 w-4 text-primary" /> Required documents
-          </h2>
-
-          {!requirements ? (
-            <p className="mt-4 text-sm text-muted-foreground">
-              Search a service or scan a form above to build your checklist.
-            </p>
-          ) : (
-            <>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {requirements.serviceName} · {requirements.authority}
-              </p>
-              {requirements.overview && (
-                <p className="mt-3 rounded-lg bg-secondary/40 p-3 text-sm text-muted-foreground">
-                  {requirements.overview}
-                </p>
-              )}
-
-              <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="applicant">Applicant name</Label>
-                  <Input
-                    id="applicant"
-                    placeholder="Name as on the application"
-                    value={applicantName}
-                    onChange={(e) => setApplicantName(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <Languages className="h-4 w-4" /> Explanation language
-                  </Label>
-                  <Select value={language} onValueChange={setLanguage}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {LANGUAGES.map((l) => (
-                        <SelectItem key={l} value={l}>
-                          {l}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <ul className="mt-5 space-y-3">
-                {docs.map((doc) => (
-                  <DocumentSlot
-                    key={doc.id}
-                    doc={doc}
-                    slot={slots[doc.id]}
-                    onPick={(file) => void handlePick(doc.id, file)}
-                    onRemove={() =>
-                      setSlots((prev) => {
-                        const next = { ...prev };
-                        delete next[doc.id];
-                        return next;
-                      })
-                    }
-                    onDigilocker={() => setDigilockerOpen(true)}
-                  />
-                ))}
-              </ul>
-
-              {requirements.notes.length > 0 && (
-                <ul className="mt-5 space-y-1 text-xs text-muted-foreground">
-                  {requirements.notes.map((n) => (
-                    <li key={n}>• {n}</li>
-                  ))}
-                </ul>
-              )}
-            </>
-          )}
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-1.5 text-xs text-[#6b7280]">
+            <span className="font-medium">Quick presets:</span>
+            {EXAMPLES.map((ex) => (
+              <button
+                key={ex}
+                type="button"
+                className="rounded-full border border-[#eae8e3] bg-white px-3 py-1 text-xs font-medium text-[#0a0a0a] transition-colors hover:border-[#0a0a0a] hover:bg-[#f4f3ef]"
+                onClick={() => {
+                  setQuery(ex);
+                  search.mutate();
+                }}
+              >
+                {ex}
+              </button>
+            ))}
+          </div>
         </section>
 
-        <ProcessingColumn docs={docs} slots={slots} events={events} />
-      </div>
+        {/* Requirements and Live Stream Grid */}
+        <div className="mt-10 grid gap-6 lg:grid-cols-2 items-start">
+          {/* Left: Required Documents Checklist */}
+          <section className="rounded-3xl border border-[#eae8e3] bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.02)]">
+            <div className="flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-base font-bold text-[#0a0a0a]">
+                <ListChecks className="h-4 w-4 text-[#0a0a0a]" /> Required documents
+              </h2>
+              {requirements && (
+                <span className="rounded-full bg-[#f4f3ef] px-2.5 py-0.5 text-xs font-semibold text-[#0a0a0a]">
+                  {docs.length} items
+                </span>
+              )}
+            </div>
 
-      <Dialog open={digilockerOpen} onOpenChange={setDigilockerOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ShieldCheck className="h-5 w-5 text-primary" /> Fetch from DigiLocker
-            </DialogTitle>
-            <DialogDescription>
-              DigiLocker issues documents only to registered partner applications. To enable one-tap
-              fetch here, DocuShield needs DigiLocker Partner API credentials (client ID, client
-              secret and a whitelisted redirect URL) from the Meri Pehchaan / DigiLocker partner
-              portal. Share those and we will wire the consent flow so issued documents arrive
-              pre-verified. Until then, download the document from your DigiLocker app and upload it
-              here — verification works exactly the same.
-            </DialogDescription>
-          </DialogHeader>
-        </DialogContent>
-      </Dialog>
+            {!requirements ? (
+              <div className="mt-8 text-center py-12 px-4 rounded-2xl border border-dashed border-[#eae8e3] bg-[#faf9f7]">
+                <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-white border border-[#eae8e3] shadow-xs">
+                  <Search className="h-4 w-4 text-[#6b7280]" />
+                </div>
+                <p className="mt-3 text-sm font-semibold text-[#0a0a0a]">No checklist active yet</p>
+                <p className="mt-1 text-xs text-[#6b7280] max-w-sm mx-auto">
+                  Type a service name above (like "Passport") or upload a form to automatically generate the document rules.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="mt-3">
+                  <div className="flex items-baseline gap-2">
+                    <span className="font-bold text-lg text-[#0a0a0a]">{requirements.serviceName}</span>
+                    <span className="text-xs text-[#6b7280]">· {requirements.authority}</span>
+                  </div>
+                  {requirements.overview && (
+                    <p className="mt-2 rounded-xl bg-[#faf9f7] border border-[#eae8e3] p-3 text-xs leading-relaxed text-[#6b7280]">
+                      {requirements.overview}
+                    </p>
+                  )}
+                </div>
 
-      <footer className="mt-20 border-t border-border pt-6 text-center text-xs text-muted-foreground">
-        Built by Team Innovative_Devs · Spiderverse Hackathon 2026 · Documents are analysed in memory
-        and never stored.
-      </footer>
-    </main>
+                <div className="mt-5 grid gap-3 sm:grid-cols-2 bg-[#faf9f7] p-3.5 rounded-2xl border border-[#eae8e3]">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="applicant" className="text-xs font-semibold text-[#0a0a0a]">
+                      Applicant name
+                    </Label>
+                    <Input
+                      id="applicant"
+                      className="h-9 rounded-xl border-[#eae8e3] bg-white text-xs"
+                      placeholder="e.g. Jane Doe"
+                      value={applicantName}
+                      onChange={(e) => setApplicantName(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="flex items-center gap-1.5 text-xs font-semibold text-[#0a0a0a]">
+                      <Languages className="h-3.5 w-3.5" /> Language
+                    </Label>
+                    <Select value={language} onValueChange={setLanguage}>
+                      <SelectTrigger className="h-9 rounded-xl border-[#eae8e3] bg-white text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {LANGUAGES.map((l) => (
+                          <SelectItem key={l} value={l} className="text-xs">
+                            {l}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <ul className="mt-5 space-y-3">
+                  {docs.map((doc) => (
+                    <DocumentSlot
+                      key={doc.id}
+                      doc={doc}
+                      slot={slots[doc.id]}
+                      onPick={(file) => void handlePick(doc.id, file)}
+                      onRemove={() =>
+                        setSlots((prev) => {
+                          const next = { ...prev };
+                          delete next[doc.id];
+                          return next;
+                        })
+                      }
+                      onDigilocker={() => setDigilockerOpen(true)}
+                    />
+                  ))}
+                </ul>
+
+                {requirements.notes.length > 0 && (
+                  <div className="mt-5 pt-4 border-t border-[#f0eee8]">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#6b7280]">
+                      Key guidelines
+                    </span>
+                    <ul className="mt-2 space-y-1 text-xs text-[#6b7280]">
+                      {requirements.notes.map((n) => (
+                        <li key={n} className="flex gap-2">
+                          <span className="text-[#0a0a0a]">•</span>
+                          <span>{n}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </>
+            )}
+          </section>
+
+          {/* Right: Processing Column */}
+          <ProcessingColumn docs={docs} slots={slots} events={events} />
+        </div>
+
+        {/* DigiLocker Modal */}
+        <Dialog open={digilockerOpen} onOpenChange={setDigilockerOpen}>
+          <DialogContent className="rounded-3xl border border-[#eae8e3] bg-white p-6 max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-lg font-bold text-[#0a0a0a]">
+                <ShieldCheck className="h-5 w-5 text-[#0a0a0a]" /> DigiLocker Integration
+              </DialogTitle>
+              <DialogDescription className="text-xs leading-relaxed text-[#6b7280] pt-2">
+                DigiLocker issues legally recognised documents via Meri Pehchaan OAuth consent flow.
+                When configured with partner client credentials, DocuShield pulls verified certificates directly into your checklist.
+                <br /><br />
+                <strong>For now:</strong> You can download any document from your DigiLocker app and upload it here — OCR and validation work identically!
+              </DialogDescription>
+            </DialogHeader>
+            <div className="mt-4 pt-3 border-t border-[#f0eee8] flex justify-end">
+              <Button
+                variant="default"
+                className="rounded-full bg-[#0a0a0a] text-white hover:bg-[#262626] text-xs h-9 px-4"
+                onClick={() => setDigilockerOpen(false)}
+              >
+                Got it
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Clean footer */}
+        <footer className="mt-24 border-t border-[#eae8e3] pt-6 flex flex-wrap items-center justify-between gap-3 text-xs text-[#6b7280]">
+          <div>DocuShield · Team Innovative_Devs · Spiderverse Hackathon 2026</div>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1 text-emerald-700 font-semibold bg-[#dcfce7] px-2 py-0.5 rounded-full text-[10px]">
+              <CheckCircle2 className="h-3 w-3" /> In-Memory Analysis Only
+            </span>
+          </div>
+        </footer>
+      </main>
+    </div>
   );
 }
