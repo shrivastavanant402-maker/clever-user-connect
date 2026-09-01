@@ -1,9 +1,27 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
+export type ExtractedField = {
+  label: string;
+  value: string;
+  entryMode: "printed" | "handwritten" | "stamped" | "unknown";
+  legible: boolean;
+  status: "ok" | "missing" | "invalid" | "mismatch" | "illegible";
+  note: string;
+};
+
+export type RequirementCheck = {
+  requirement: string;
+  met: boolean;
+  evidence: string;
+};
+
 export type DocVerdict = {
   status: "verified" | "warning" | "rejected";
   detectedType: string;
+  isGovernmentForm: boolean;
+  formIdentifier: string | null;
+  issuingAuthority: string | null;
   matchesRequirement: boolean;
   extractedName: string | null;
   documentNumber: string | null;
@@ -11,16 +29,24 @@ export type DocVerdict = {
   expiryDate: string | null;
   quality: "good" | "poor" | "unreadable";
   tamperingSuspected: boolean;
+  handwrittenEntries: string[];
+  incompleteFields: string[];
+  signaturePresent: boolean;
+  stampPresent: boolean;
   confidence: number;
   issues: string[];
   insight: string;
   fixSteps: string[];
-  extractedFields: Array<{ label: string; value: string }>;
+  requirementChecks: RequirementCheck[];
+  extractedFields: ExtractedField[];
 };
 
 const RESULT_SHAPE = `{
   "status": "verified" | "warning" | "rejected",
   "detectedType": string,
+  "isGovernmentForm": boolean (true if this is a filled application/government form rather than an ID or certificate),
+  "formIdentifier": string | null (form number / code printed on the form, e.g. "Form 49A"),
+  "issuingAuthority": string | null,
   "matchesRequirement": boolean,
   "extractedName": string | null,
   "documentNumber": string | null,
@@ -28,12 +54,25 @@ const RESULT_SHAPE = `{
   "expiryDate": string | null,
   "quality": "good" | "poor" | "unreadable",
   "tamperingSuspected": boolean,
+  "handwrittenEntries": string[] (labels of fields filled in by hand),
+  "incompleteFields": string[] (mandatory fields left blank or partially filled),
+  "signaturePresent": boolean,
+  "stampPresent": boolean,
   "confidence": number (0-100),
   "issues": string[],
   "insight": string (why it passed or failed, in plain language, referencing what was actually read),
   "fixSteps": string[] (concrete actions the applicant should take; empty if verified),
-  "extractedFields": [{ "label": string, "value": string }]
+  "requirementChecks": [{ "requirement": string (one specific rule from the checklist slot), "met": boolean, "evidence": string (what was read that proves it) }],
+  "extractedFields": [{
+    "label": string,
+    "value": string,
+    "entryMode": "printed" | "handwritten" | "stamped" | "unknown",
+    "legible": boolean,
+    "status": "ok" | "missing" | "invalid" | "mismatch" | "illegible",
+    "note": string (empty when status is ok)
+  }]
 }`;
+
 
 export const verifyDocument = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) =>
