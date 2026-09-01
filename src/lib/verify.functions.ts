@@ -97,8 +97,8 @@ export const verifyDocument = createServerFn({ method: "POST" })
     if (!apiKey) throw new Error("AI is not configured for this project.");
 
     const b64Parts = data.file.dataUrl.split(",");
-    const mimeType = b64Parts[0].split(":")[1].split(";")[0];
-    const b64Data = b64Parts[1];
+    const mimeType = b64Parts[0]?.split(":")[1]?.split(";")[0] ?? "application/octet-stream";
+    const b64Data = b64Parts[1] ?? "";
 
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, {
       method: "POST",

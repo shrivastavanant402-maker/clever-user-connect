@@ -13,7 +13,7 @@ import {
   Sparkles,
   ArrowLeft,
   CheckCircle2,
-  ExternalLink,
+  Building2,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -201,6 +201,10 @@ function AppPage() {
             </Link>
             <Link to="/app" className="site-nav__link site-nav__link--active">
               Workspace
+            </Link>
+            <Link to="/org" className="site-nav__link">
+              <Building2 className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
+              Organization
             </Link>
             <button
               type="button"

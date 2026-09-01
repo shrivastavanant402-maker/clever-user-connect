@@ -23,6 +23,7 @@ import {
   SlidersHorizontal,
   Bell,
   Smartphone,
+  Building2,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -289,6 +290,10 @@ function LandingPage() {
             <a href="#faq" className="site-nav__link">
               FAQ
             </a>
+            <Link to="/org" className="site-nav__link">
+              <Building2 className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
+              Organizations
+            </Link>
           </div>
 
           <Link to="/app" className="site-nav__cta" id="get-started-btn">
@@ -643,6 +648,9 @@ function LandingPage() {
           </Link>
           <Link to="/app" className="hover:text-[#0a0a0a]">
             Workspace
+          </Link>
+          <Link to="/org" className="hover:text-[#0a0a0a]">
+            Organizations
           </Link>
           <a href="#how-it-works" className="hover:text-[#0a0a0a]">
             How it works
