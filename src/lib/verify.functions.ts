@@ -157,7 +157,17 @@ ${RESULT_SHAPE}`,
 
     parsed.issues ??= [];
     parsed.fixSteps ??= [];
-    parsed.extractedFields ??= [];
+    parsed.handwrittenEntries ??= [];
+    parsed.incompleteFields ??= [];
+    parsed.requirementChecks ??= [];
+    parsed.extractedFields = (parsed.extractedFields ?? []).map((f) => ({
+      label: f.label,
+      value: f.value ?? "",
+      entryMode: f.entryMode ?? "unknown",
+      legible: f.legible !== false,
+      status: f.status ?? "ok",
+      note: f.note ?? "",
+    }));
     parsed.confidence = Math.max(0, Math.min(100, Math.round(parsed.confidence ?? 0)));
     return parsed;
   });
