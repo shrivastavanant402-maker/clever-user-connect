@@ -421,7 +421,14 @@ export const scanFormRequirements = createServerFn({ method: "POST" })
             content: [
               {
                 type: "text",
-                text: `Read this application form. Identify which service/scheme it is for and the issuing authority, then list every supporting document an applicant must attach with it, in ${data.language}. Include documents implied by the form's declarations and annexures.
+                text: `Read this application form. Identify which service/scheme it is for and the issuing authority, then list ONLY the supporting documents that the form itself explicitly names as required attachments, in ${data.language}.
+
+STRICT RULES:
+- Transcribe the form's own checklist/"documents to be enclosed" section verbatim. Do NOT add documents from general knowledge of the scheme.
+- Do NOT invent, infer, expand or split entries. If the form lists 2 documents, return exactly 2 documents.
+- If one line offers alternatives (e.g. "Aadhaar / Voter ID"), keep it as ONE document entry.
+- Never merge duplicates into extra entries; never append photographs, declarations or annexures unless the form explicitly lists them as attachments to enclose.
+- If the form names no attachments at all, return an empty documents array.
 
 Return ONLY minified JSON matching:
 ${SHAPE}`,
