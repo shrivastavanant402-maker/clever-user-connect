@@ -36,9 +36,12 @@ import {
   Printer,
   Upload,
   RefreshCw,
+  FileBadge2,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ConnectWallet } from "@/components/verifier/ConnectWallet";
+import { IssuerDashboard } from "@/components/verifier/IssuerDashboard";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
@@ -1176,6 +1179,7 @@ function AdminDashboard({
 
   const [templates, setTemplates] = useState<ChecklistTemplate[]>([]);
   const [loaded, setLoaded]       = useState(false);
+  const [activeTab, setActiveTab] = useState<"templates" | "registry">("templates");
 
   const refresh = useCallback(async () => {
     const data = await listChecklistsFn({ data: { username: session.username } });
@@ -1228,14 +1232,46 @@ function AdminDashboard({
         </div>
       </div>
 
-      {/* Templates list */}
-      <div>
-        <h3 className="flex items-center gap-2 text-sm font-bold text-[#0a0a0a] mb-3">
-          <ListChecks className="h-4 w-4" /> Verification templates
-          <span className="rounded-full bg-[#f4f3ef] px-2 py-0.5 text-xs font-semibold text-[#6b7280]">
-            {templates.length}
+      {/* Tabs */}
+      <div className="flex items-center gap-6 border-b border-[#eae8e3] px-2 mb-6">
+        <button
+          className={`pb-3 text-sm font-semibold transition-colors relative ${
+            activeTab === "templates" ? "text-[#0a0a0a]" : "text-[#6b7280] hover:text-[#0a0a0a]"
+          }`}
+          onClick={() => setActiveTab("templates")}
+        >
+          <span className="flex items-center gap-2">
+            <ListChecks className="h-4 w-4" /> Verification Templates
           </span>
-        </h3>
+          {activeTab === "templates" && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0a0a0a] rounded-t-full" />
+          )}
+        </button>
+        <button
+          className={`pb-3 text-sm font-semibold transition-colors relative ${
+            activeTab === "registry" ? "text-[#0a0a0a]" : "text-[#6b7280] hover:text-[#0a0a0a]"
+          }`}
+          onClick={() => setActiveTab("registry")}
+        >
+          <span className="flex items-center gap-2">
+            <FileBadge2 className="h-4 w-4" /> My Registered Documents
+          </span>
+          {activeTab === "registry" && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0a0a0a] rounded-t-full" />
+          )}
+        </button>
+      </div>
+
+      {activeTab === "templates" ? (
+        <>
+          {/* Templates list */}
+          <div>
+            <h3 className="flex items-center gap-2 text-sm font-bold text-[#0a0a0a] mb-3">
+              <ListChecks className="h-4 w-4" /> Verification templates
+              <span className="rounded-full bg-[#f4f3ef] px-2 py-0.5 text-xs font-semibold text-[#6b7280]">
+                {templates.length}
+              </span>
+            </h3>
 
         {!loaded ? (
           <div className="flex items-center gap-2 text-sm text-[#6b7280] py-6">
@@ -1360,14 +1396,18 @@ function AdminDashboard({
         )}
       </div>
 
-      {/* Hint */}
-      <div className="rounded-2xl border border-[#eae8e3] bg-[#faf9f7] px-4 py-3.5 text-xs text-[#6b7280] flex items-start gap-2">
-        <BookOpen className="h-4 w-4 mt-0.5 shrink-0 text-[#0a0a0a]" />
-        <span>
-          Share the applicant link with your applicants. They upload <strong className="text-[#0a0a0a]">one combined PDF</strong> containing all required documents.
-          DocuShield's AI will segment, tamper-check, and verify each document automatically.
-        </span>
-      </div>
+          {/* Hint */}
+          <div className="rounded-2xl border border-[#eae8e3] bg-[#faf9f7] px-4 py-3.5 text-xs text-[#6b7280] flex items-start gap-2">
+            <BookOpen className="h-4 w-4 mt-0.5 shrink-0 text-[#0a0a0a]" />
+            <span>
+              Share the applicant link with your applicants. They upload <strong className="text-[#0a0a0a]">one combined PDF</strong> containing all required documents.
+              DocuShield's AI will segment, tamper-check, and verify each document automatically.
+            </span>
+          </div>
+        </>
+      ) : (
+        <IssuerDashboard />
+      )}
     </div>
   );
 }

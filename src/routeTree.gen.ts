@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as OrgRouteImport } from './routes/org'
+import { Route as VerifyDocumentHashRouteImport } from './routes/verify.$documentHash'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -28,35 +29,44 @@ const OrgRoute = OrgRouteImport.update({
   path: '/org',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VerifyDocumentHashRoute = VerifyDocumentHashRouteImport.update({
+  id: '/verify/$documentHash',
+  path: '/verify/$documentHash',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRoute
   '/org': typeof OrgRoute
+  '/verify/$documentHash': typeof VerifyDocumentHashRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/app': typeof AppRoute
   '/org': typeof OrgRoute
+  '/verify/$documentHash': typeof VerifyDocumentHashRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/app': typeof AppRoute
   '/org': typeof OrgRoute
+  '/verify/$documentHash': typeof VerifyDocumentHashRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/app' | '/org'
+  fullPaths: '/' | '/app' | '/org' | '/verify/$documentHash'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/app' | '/org'
-  id: '__root__' | '/' | '/app' | '/org'
+  to: '/' | '/app' | '/org' | '/verify/$documentHash'
+  id: '__root__' | '/' | '/app' | '/org' | '/verify/$documentHash'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRoute
   OrgRoute: typeof OrgRoute
+  VerifyDocumentHashRoute: typeof VerifyDocumentHashRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -82,6 +92,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrgRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/verify/$documentHash': {
+      id: '/verify/$documentHash'
+      path: '/verify/$documentHash'
+      fullPath: '/verify/$documentHash'
+      preLoaderRoute: typeof VerifyDocumentHashRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -89,6 +106,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRoute,
   OrgRoute: OrgRoute,
+  VerifyDocumentHashRoute: VerifyDocumentHashRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

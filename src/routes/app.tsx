@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/dialog";
 import { DocumentSlot } from "@/components/verifier/DocumentSlot";
 import { ProcessingColumn } from "@/components/verifier/ProcessingColumn";
+import { DigiLockerSandboxModal } from "@/lib/digilocker/sandbox";
 import { readLocalFile, ACCEPTED } from "@/lib/local-file";
 import type { FeedEvent, SlotState, Stage } from "@/lib/upload-state";
 import {
@@ -85,7 +86,7 @@ function AppPage() {
   const [requirements, setRequirements] = useState<ServiceRequirements | null>(null);
   const [slots, setSlots] = useState<Record<string, SlotState>>({});
   const [events, setEvents] = useState<FeedEvent[]>([]);
-  const [digilockerOpen, setDigilockerOpen] = useState(false);
+  const [digilockerTarget, setDigilockerTarget] = useState<string | null>(null);
   const formInputRef = useRef<HTMLInputElement>(null);
 
   const searchFn = useServerFn(getServiceRequirements);
@@ -133,11 +134,11 @@ function AppPage() {
   const setStage = (docId: string, stage: Stage, patch: Partial<SlotState> = {}) =>
     setSlots((prev) => (prev[docId] ? { ...prev, [docId]: { ...prev[docId], stage, ...patch } } : prev));
 
-  const handlePick = async (docId: string, file: File) => {
+  const handlePick = async (docId: string, file: File, source: "upload" | "digilocker" = "upload") => {
     const doc = requirements?.documents.find((d) => d.id === docId);
     if (!doc) return;
     const local = await readLocalFile(file);
-    setSlots((prev) => ({ ...prev, [docId]: { file: local, stage: "reading", source: "upload" } }));
+    setSlots((prev) => ({ ...prev, [docId]: { file: local, stage: "reading", source } }));
     log(doc.name, `Received ${local.name}`);
 
     const t1 = setTimeout(() => {
@@ -208,7 +209,15 @@ function AppPage() {
             </Link>
             <button
               type="button"
-              onClick={() => setDigilockerOpen(true)}
+              onClick={() => {
+                // If there's at least one document slot, pick the first one as default target,
+                // otherwise just show a toast that a requirement needs to be loaded first
+                if (requirements?.documents && requirements.documents.length > 0) {
+                  setDigilockerTarget(requirements.documents[0]?.id ?? null);
+                } else {
+                  toast.error("Please search for a service first.");
+                }
+              }}
               className="site-nav__link"
             >
               DigiLocker
@@ -393,7 +402,7 @@ function AppPage() {
                           return next;
                         })
                       }
-                      onDigilocker={() => setDigilockerOpen(true)}
+                      onDigilocker={() => setDigilockerTarget(doc.id)}
                     />
                   ))}
                 </ul>
@@ -421,31 +430,18 @@ function AppPage() {
           <ProcessingColumn docs={docs} slots={slots} events={events} />
         </div>
 
-        {/* DigiLocker Modal */}
-        <Dialog open={digilockerOpen} onOpenChange={setDigilockerOpen}>
-          <DialogContent className="rounded-3xl border border-[#eae8e3] bg-white p-6 max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-lg font-bold text-[#0a0a0a]">
-                <ShieldCheck className="h-5 w-5 text-[#0a0a0a]" /> DigiLocker Integration
-              </DialogTitle>
-              <DialogDescription className="text-xs leading-relaxed text-[#6b7280] pt-2">
-                DigiLocker issues legally recognised documents via Meri Pehchaan OAuth consent flow.
-                When configured with partner client credentials, DocuShield pulls verified certificates directly into your checklist.
-                <br /><br />
-                <strong>For now:</strong> You can download any document from your DigiLocker app and upload it here — OCR and validation work identically!
-              </DialogDescription>
-            </DialogHeader>
-            <div className="mt-4 pt-3 border-t border-[#f0eee8] flex justify-end">
-              <Button
-                variant="default"
-                className="rounded-full bg-[#0a0a0a] text-white hover:bg-[#262626] text-xs h-9 px-4"
-                onClick={() => setDigilockerOpen(false)}
-              >
-                Got it
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        {/* DigiLocker Sandbox Modal */}
+        <DigiLockerSandboxModal 
+          open={!!digilockerTarget} 
+          onOpenChange={(val) => {
+            if (!val) setDigilockerTarget(null);
+          }}
+          onImport={(file) => {
+            if (digilockerTarget) {
+              void handlePick(digilockerTarget, file, "digilocker");
+            }
+          }}
+        />
 
         {/* Clean footer */}
         <footer className="mt-24 border-t border-[#eae8e3] pt-6 flex flex-wrap items-center justify-between gap-3 text-xs text-[#6b7280]">

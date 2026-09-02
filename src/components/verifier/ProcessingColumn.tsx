@@ -10,8 +10,219 @@ import {
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import type { FeedEvent, SlotState } from "@/lib/upload-state";
 import type { RequiredDoc } from "@/lib/requirements.functions";
+import { useState, useEffect } from "react";
+import { BrowserProvider, Contract, JsonRpcProvider } from "ethers";
+import { toast } from "sonner";
+import { useWallet } from "./WalletContext";
+import { DOCUSHIELD_REGISTRY_ADDRESS, DOCUSHIELD_REGISTRY_ABI } from "@/lib/contracts";
+
+export function BlockchainVerificationStatus({ documentHash }: { documentHash: string }) {
+  const [status, setStatus] = useState<"loading" | "verified" | "revoked" | "not_registered">("loading");
+  const [recordData, setRecordData] = useState<any>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function checkBlockchain() {
+      try {
+        const hashBytes32 = documentHash.startsWith("0x") ? documentHash : `0x${documentHash}`;
+        
+        let provider;
+        if (window.ethereum) {
+          provider = new BrowserProvider(window.ethereum);
+        } else {
+          provider = new JsonRpcProvider(import.meta.env['VITE_AMOY_RPC_URL'] || "https://rpc-amoy.polygon.technology/");
+        }
+
+        const contract = new Contract(DOCUSHIELD_REGISTRY_ADDRESS, DOCUSHIELD_REGISTRY_ABI, provider) as any;
+        const record = await contract.documents(hashBytes32);
+        
+        if (!isMounted) return;
+
+        const exists = record[5];
+        if (!exists) {
+          setStatus("not_registered");
+        } else {
+          const active = record[4];
+          if (active) {
+            setStatus("verified");
+            setRecordData({
+              issuer: record[1],
+              registeredAt: Number(record[2]) * 1000,
+              version: Number(record[3]),
+            });
+          } else {
+            setStatus("revoked");
+          }
+        }
+      } catch (err) {
+        console.error("Failed to verify on blockchain:", err);
+        if (isMounted) setStatus("not_registered"); // Fallback
+      }
+    }
+    
+    checkBlockchain();
+    return () => { isMounted = false; };
+  }, [documentHash]);
+
+  if (status === "loading") {
+    return (
+      <div className="mt-3 rounded-lg border border-border p-3 text-xs bg-muted/30">
+        <p className="font-semibold flex items-center gap-2 text-muted-foreground">
+          <Activity className="h-3.5 w-3.5 animate-pulse" /> Checking blockchain...
+        </p>
+      </div>
+    );
+  }
+
+  if (status === "not_registered") {
+    return (
+      <div className="mt-3 rounded-lg border border-border p-3 text-xs bg-muted/20">
+        <p className="font-semibold flex items-center gap-1 text-muted-foreground">
+          <XCircle className="h-3.5 w-3.5" /> Not Registered
+        </p>
+        <p className="mt-1 text-muted-foreground/80">
+          This exact document fingerprint was not found in the DocuShield registry.
+        </p>
+      </div>
+    );
+  }
+
+  if (status === "revoked") {
+    return (
+      <div className="mt-3 rounded-lg border border-warning/30 p-3 text-xs bg-warning/10">
+        <p className="font-semibold flex items-center gap-1 text-warning">
+          <AlertTriangle className="h-3.5 w-3.5" /> Blockchain Record Revoked
+        </p>
+        <p className="mt-1 text-warning/80">
+          The document fingerprint exists on-chain, but the registration is no longer active.
+        </p>
+      </div>
+    );
+  }
+
+  // verified
+  return (
+    <div className="mt-3 rounded-lg border border-success/30 p-3 text-xs bg-success/10">
+      <p className="font-semibold flex items-center gap-1 text-success">
+        <CheckCircle2 className="h-3.5 w-3.5" /> Blockchain Verified
+      </p>
+      <p className="mt-1 text-success/90">Exact document fingerprint found on Polygon Amoy</p>
+      
+      {recordData && (
+        <div className="mt-2 space-y-1 text-[10px] text-success/80 font-mono">
+          <p>Issuer: {recordData.issuer}</p>
+          <p>Registered: {new Date(recordData.registeredAt).toLocaleString()}</p>
+          <p>Version: {recordData.version}</p>
+        </div>
+      )}
+      
+      {recordData?.issuer && (
+        <a 
+          href={`https://amoy.polygonscan.com/address/${recordData.issuer}`}
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="mt-2 inline-block text-success hover:underline font-medium text-[11px]"
+        >
+          View Issuer on PolygonScan ↗
+        </a>
+      )}
+    </div>
+  );
+}
+
+export function RegisterButton({ documentHash }: { documentHash: string }) {
+  const { account, isCorrectNetwork } = useWallet();
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [txHash, setTxHash] = useState<string | null>(null);
+
+  const handleRegister = async () => {
+    if (!window.ethereum) {
+      toast.error("MetaMask is not installed.");
+      return;
+    }
+    if (!account || !isCorrectNetwork) {
+      toast.error("Please connect MetaMask to Polygon Amoy.");
+      return;
+    }
+
+    try {
+      setIsRegistering(true);
+      const provider = new BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const contract = new Contract(DOCUSHIELD_REGISTRY_ADDRESS, DOCUSHIELD_REGISTRY_ABI, signer) as any;
+
+      const hashBytes32 = documentHash.startsWith("0x") ? documentHash : `0x${documentHash}`;
+      
+      // Polygon Amoy requires a strict minimum gas tip cap of 25 gwei
+      const feeData = await provider.getFeeData();
+      const minTip = 25000000000n; // 25 gwei in wei
+      
+      const priorityFee = feeData.maxPriorityFeePerGas && feeData.maxPriorityFeePerGas > minTip 
+        ? feeData.maxPriorityFeePerGas 
+        : minTip;
+        
+      // Ensure maxFeePerGas is at least priorityFee + baseFee (approximated here)
+      const baseFee = feeData.maxFeePerGas ? (feeData.maxFeePerGas - (feeData.maxPriorityFeePerGas || 0n)) : 5000000000n;
+      const maxFee = priorityFee + baseFee;
+
+      const tx = await contract.registerDocument(hashBytes32, hashBytes32, {
+        maxPriorityFeePerGas: priorityFee,
+        maxFeePerGas: maxFee,
+      });
+      
+      toast.info("Transaction submitted. Waiting for confirmation...");
+      await tx.wait();
+      
+      setTxHash(tx.hash);
+      toast.success("Document registered successfully on Polygon Amoy!");
+    } catch (error: any) {
+      console.error(error);
+      if (error.code === "ACTION_REJECTED" || error.info?.error?.code === 4001) {
+        toast.error("Transaction was rejected by the user.");
+      } else if (error.message?.includes("Document ID already registered") || error.reason?.includes("already registered")) {
+        toast.error("This document has already been registered on-chain!");
+      } else {
+        const exactError = error.reason || error.info?.error?.message || error.message || "Unknown error";
+        toast.error(`Failed to register on-chain: ${exactError}`);
+      }
+    } finally {
+      setIsRegistering(false);
+    }
+  };
+
+  if (txHash) {
+    return (
+      <div className="mt-3 rounded-lg border border-success/30 bg-success/10 p-3 text-xs">
+        <p className="font-semibold text-success flex items-center gap-1">
+          <CheckCircle2 className="h-3.5 w-3.5" /> Successfully registered
+        </p>
+        <p className="mt-1 text-muted-foreground truncate">Tx: {txHash}</p>
+        <a 
+          href={`https://amoy.polygonscan.com/tx/${txHash}`}
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="mt-1.5 inline-block text-primary hover:underline font-medium"
+        >
+          View on PolygonScan ↗
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <Button 
+      onClick={handleRegister} 
+      disabled={isRegistering || !account || !isCorrectNetwork}
+      className="mt-3 w-full text-xs h-8"
+      variant="outline"
+    >
+      {isRegistering ? "Registering on Blockchain..." : "Register on Blockchain"}
+    </Button>
+  );
+}
 
 const toneClass: Record<FeedEvent["tone"], string> = {
   info: "text-muted-foreground",
@@ -217,6 +428,8 @@ export function ProcessingColumn({
                     <CheckCircle2 className="h-3 w-3" /> Fingerprint generated
                   </p>
                 </div>
+                <BlockchainVerificationStatus documentHash={v.documentHash} />
+                <RegisterButton documentHash={v.documentHash} />
               </div>
             )}
 
