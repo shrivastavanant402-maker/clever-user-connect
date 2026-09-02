@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { extractText, getDocumentProxy } from "unpdf";
 
 export type RequiredDoc = {
   id: string;
@@ -86,6 +87,47 @@ const gateway = async (body: any) => {
   }
 };
 
+const extractPdfText = async (dataUrl: string) => {
+  const encoded = dataUrl.split(",")[1];
+  if (!encoded) return "";
+  const pdf = await getDocumentProxy(new Uint8Array(Buffer.from(encoded, "base64")));
+  const result = await extractText(pdf, { mergePages: true });
+  return typeof result.text === "string" ? result.text.trim() : "";
+};
+
+const parseExplicitDocumentTable = (text: string, language: string): ServiceRequirements | null => {
+  const lines = text.split(/\r?\n/).map((line) => line.replace(/\s+/g, " ").trim()).filter(Boolean);
+  const headingIndex = lines.findIndex((line) => /document name/i.test(line) && /mandatory/i.test(line));
+  if (headingIndex < 0) return null;
+
+  const documents: RequiredDoc[] = [];
+  for (const line of lines.slice(headingIndex + 1)) {
+    if (/^(note|instructions?|remarks?)\s*:?$/i.test(line)) break;
+    const match = line.match(/^\s*(\d+)\s+(.+?)\s+(yes|no|mandatory|optional)\s*$/i);
+    if (!match?.[2]) continue;
+    const name = match[2].trim();
+    documents.push({
+      id: name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `doc-${documents.length + 1}`,
+      name,
+      description: `Provide a clear, valid copy of the ${name}.`,
+      mandatory: /^(yes|mandatory)$/i.test(match[3] ?? ""),
+      acceptedFormats: ["PDF", "JPG", "PNG"],
+      digilockerType: /aadhaar|pan|driving licence|marksheet/i.test(name) ? name : null,
+    });
+  }
+
+  if (documents.length === 0) return null;
+  const title = lines.slice(0, headingIndex).find((line) => /documents? required/i.test(line)) ?? "Application requirements";
+  const noteIndex = lines.findIndex((line) => /^note\s*:?$/i.test(line));
+  return {
+    serviceName: title.replace(/^documents? required for\s*/i, "").trim() || "Application",
+    authority: "—",
+    overview: `${documents.length} document${documents.length === 1 ? "" : "s"} explicitly listed in the uploaded form.`,
+    documents,
+    notes: noteIndex >= 0 ? lines.slice(noteIndex + 1, noteIndex + 2) : [],
+  };
+};
+
 const normalise = (r: ServiceRequirements): ServiceRequirements => {
   const seen = new Set<string>();
   const documents = (r.documents ?? [])
@@ -99,7 +141,7 @@ const normalise = (r: ServiceRequirements): ServiceRequirements => {
       id: d.id || `doc-${i}`,
       name: d.name,
       description: d.description ?? "",
-      mandatory: false,
+      mandatory: d.mandatory ?? false,
       acceptedFormats: d.acceptedFormats ?? ["JPG", "PNG", "PDF"],
       digilockerType: d.digilockerType ?? null,
     }));
@@ -413,14 +455,29 @@ export const scanFormRequirements = createServerFn({ method: "POST" })
       .parse(data),
   )
   .handler(async ({ data }): Promise<ServiceRequirements> => {
+    const isPdf = data.file.mimeType === "application/pdf";
+    if (isPdf) {
+      try {
+        const pdfText = await extractPdfText(data.file.dataUrl);
+        const exactTable = parseExplicitDocumentTable(pdfText, data.language);
+        if (exactTable) return normalise(exactTable);
+      } catch (err) {
+        console.warn("Direct PDF checklist extraction failed; trying visual analysis:", err);
+      }
+    }
+
     const apiKey = process.env["GEMINI_API_KEY"];
     if (!apiKey) {
-      const fileName = data.file?.name || "Application Form";
-      return normalise(getFallbackServiceRequirements(fileName.replace(/\.[^/.]+$/, ""), data.language));
+      return normalise({
+        serviceName: data.file.name.replace(/\.[^/.]+$/, "") || "Application Form",
+        authority: "—",
+        overview: "The uploaded form did not contain a machine-readable document checklist.",
+        documents: [],
+        notes: ["Upload a clearer text-based PDF or image so the attachment list can be read accurately."],
+      });
     }
 
     try {
-      const isPdf = data.file.mimeType === "application/pdf";
       const media = isPdf
         ? { type: "file", file: { filename: data.file.name, file_data: data.file.dataUrl } }
         : { type: "image_url", image_url: { url: data.file.dataUrl } };
@@ -452,8 +509,13 @@ ${SHAPE}`,
       })) as ServiceRequirements;
       return normalise(parsed);
     } catch (err) {
-      console.warn("Gemini API call failed, using fallback form requirements for presentation:", err);
-      const fileName = data.file?.name || "Application Form";
-      return normalise(getFallbackServiceRequirements(fileName.replace(/\.[^/.]+$/, ""), data.language));
+      console.warn("Form analysis failed; returning no inferred documents:", err);
+      return normalise({
+        serviceName: data.file.name.replace(/\.[^/.]+$/, "") || "Application Form",
+        authority: "—",
+        overview: "The document checklist could not be read reliably.",
+        documents: [],
+        notes: ["No documents were inferred because doing so could create an incorrect checklist."],
+      });
     }
   });
