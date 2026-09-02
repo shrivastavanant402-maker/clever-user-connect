@@ -96,7 +96,7 @@ const normalise = (r: ServiceRequirements): ServiceRequirements => ({
     id: d.id || `doc-${i}`,
     name: d.name,
     description: d.description ?? "",
-    mandatory: d.mandatory !== false,
+    mandatory: false,
     acceptedFormats: d.acceptedFormats ?? ["JPG", "PNG", "PDF"],
     digilockerType: d.digilockerType ?? null,
   })),
