@@ -25,12 +25,13 @@ async function callGemini(body: any): Promise<string> {
   const apiKey = process.env["GEMINI_API_KEY"];
   if (!apiKey) throw new Error("AI is not configured for this project.");
 
-  const model = process.env["GEMINI_MODEL"] || "gemini-3.6-flash";
+  const model = process.env["GEMINI_MODEL"] || "gemini-2.5-flash";
 
   const payload = {
     ...body,
     generationConfig: {
       responseMimeType: "application/json",
+      thinkingConfig: { thinkingBudget: 0 },
       temperature: 0.1,
       ...body.generationConfig,
     },
@@ -99,7 +100,7 @@ export type BatchVerdict = {
 
 /** Validate admin credentials against the hardcoded list. */
 export const adminLogin = createServerFn({ method: "POST" })
-  .validator((data: unknown) =>
+  .inputValidator((data: unknown) =>
     z.object({ username: z.string(), password: z.string() }).parse(data),
   )
   .handler(async ({ data }): Promise<{ ok: boolean; username: string; orgName: string }> => {
@@ -112,7 +113,7 @@ export const adminLogin = createServerFn({ method: "POST" })
 
 /** Save (or create) a checklist template. */
 export const saveChecklist = createServerFn({ method: "POST" })
-  .validator((data: unknown) =>
+  .inputValidator((data: unknown) =>
     z
       .object({
         name: z.string().min(1).max(200),
@@ -144,7 +145,7 @@ export const saveChecklist = createServerFn({ method: "POST" })
 
 /** Update an existing checklist template. */
 export const updateChecklist = createServerFn({ method: "POST" })
-  .validator((data: unknown) =>
+  .inputValidator((data: unknown) =>
     z
       .object({
         id: z.string(),
@@ -176,7 +177,7 @@ export const updateChecklist = createServerFn({ method: "POST" })
 
 /** Duplicate an existing checklist template. */
 export const duplicateChecklist = createServerFn({ method: "POST" })
-  .validator((data: unknown) =>
+  .inputValidator((data: unknown) =>
     z.object({ id: z.string(), username: z.string() }).parse(data),
   )
   .handler(async ({ data }): Promise<ChecklistTemplate> => {
@@ -187,7 +188,7 @@ export const duplicateChecklist = createServerFn({ method: "POST" })
 
 /** List all templates created by a specific admin. */
 export const listChecklists = createServerFn({ method: "POST" })
-  .validator((data: unknown) =>
+  .inputValidator((data: unknown) =>
     z.object({ username: z.string() }).parse(data),
   )
   .handler(async ({ data }): Promise<ChecklistTemplate[]> => {
@@ -196,7 +197,7 @@ export const listChecklists = createServerFn({ method: "POST" })
 
 /** Delete a template by id. */
 export const deleteChecklist = createServerFn({ method: "POST" })
-  .validator((data: unknown) =>
+  .inputValidator((data: unknown) =>
     z.object({ id: z.string(), username: z.string() }).parse(data),
   )
   .handler(async ({ data }): Promise<{ ok: boolean }> => {
@@ -207,7 +208,7 @@ export const deleteChecklist = createServerFn({ method: "POST" })
 
 /** Fetch a single template by id (public — used by applicant submission page). */
 export const getChecklist = createServerFn({ method: "POST" })
-  .validator((data: unknown) =>
+  .inputValidator((data: unknown) =>
     z.object({ id: z.string() }).parse(data),
   )
   .handler(async ({ data }): Promise<ChecklistTemplate | null> => {

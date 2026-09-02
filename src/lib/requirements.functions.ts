@@ -38,7 +38,7 @@ const gateway = async (body: any) => {
   const apiKey = process.env["GEMINI_API_KEY"];
   if (!apiKey) throw new Error("AI is not configured for this project.");
   
-  const model = body.model || process.env["GEMINI_MODEL"] || "gemini-3.6-flash";
+  const model = body.model || process.env["GEMINI_MODEL"] || "gemini-2.5-flash";
 
   const geminiBody = {
     contents: body.messages.map((m: any) => ({
@@ -62,6 +62,7 @@ const gateway = async (body: any) => {
     })),
     generationConfig: {
       ...(body.response_format?.type === "json_object" ? { responseMimeType: "application/json" } : {}),
+      thinkingConfig: { thinkingBudget: 0 },
       temperature: 0.1,
     }
   };
