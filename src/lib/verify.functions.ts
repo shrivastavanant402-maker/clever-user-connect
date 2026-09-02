@@ -267,11 +267,7 @@ export const verifyDocument = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<DocVerdict> => {
     if (!data.file?.dataUrl) throw new Error("No file data provided");
     const b64Parts = data.file.dataUrl.split(",");
-<<<<<<< HEAD
     const mimeType = b64Parts[0]?.split(":")[1]?.split(";")[0] ?? "application/octet-stream";
-    const b64Data = b64Parts[1] ?? "";
-=======
-    const mimeType = b64Parts[0]?.split(":")[1]?.split(";")[0] || "";
     const b64Data = b64Parts[1];
     
     if (!b64Data) throw new Error("Invalid base64 file data");
@@ -282,7 +278,6 @@ export const verifyDocument = createServerFn({ method: "POST" })
       bytes[i] = binaryString.charCodeAt(i);
     }
     const documentHash = await calculateSHA256(bytes);
->>>>>>> 9e8e96e (Implement Local Blockchain Demo (Milestone 3A))
 
     const apiKey = process.env["GEMINI_API_KEY"];
     if (!apiKey) {
