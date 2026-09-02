@@ -55,15 +55,9 @@ export function DocumentSlot({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="font-semibold text-[#0a0a0a] text-[15px]">{doc.name}</span>
-            {!doc.mandatory ? (
-              <span className="rounded-full bg-[#f4f3ef] px-2.5 py-0.5 text-[11px] font-medium text-[#6b7280]">
-                Optional
-              </span>
-            ) : (
-              <span className="rounded-full bg-[#0a0a0a] px-2 py-0.5 text-[10px] font-bold text-white uppercase tracking-wider">
-                Required
-              </span>
-            )}
+            <span className="rounded-full bg-[#f0fdf4] border border-[#dcfce7] px-2 py-0.5 text-[10px] font-medium text-[#166534]">
+              +Accuracy
+            </span>
           </div>
           {doc.description && (
             <p className="mt-1 text-xs leading-relaxed text-[#6b7280]">{doc.description}</p>

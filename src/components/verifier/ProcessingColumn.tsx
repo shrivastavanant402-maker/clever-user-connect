@@ -29,15 +29,19 @@ export function ProcessingColumn({
   slots: Record<string, SlotState>;
   events: FeedEvent[];
 }) {
-  const mandatory = docs.filter((d) => d.mandatory);
-  const verified = mandatory.filter((d) => slots[d.id]?.verdict?.status === "verified").length;
+  const verified = docs.filter((d) => slots[d.id]?.verdict?.status === "verified").length;
   const warnings = docs.filter((d) => slots[d.id]?.verdict?.status === "warning");
   const rejected = docs.filter((d) => slots[d.id]?.verdict?.status === "rejected");
-  const readiness = mandatory.length
+  
+  // Every uploaded and verified document boosts the overall verification accuracy and confidence
+  const accuracyScore = docs.length
     ? Math.round(
-        Math.max(
-          0,
-          (verified / mandatory.length) * 100 - (warnings.length / mandatory.length) * 10,
+        Math.min(
+          100,
+          Math.max(
+            0,
+            (verified / docs.length) * 100 - (warnings.length * 5) - (rejected.length * 15),
+          ),
         ),
       )
     : 0;
@@ -48,15 +52,18 @@ export function ProcessingColumn({
         <div className="flex items-end justify-between gap-4">
           <div>
             <h2 className="flex items-center gap-2 text-lg font-semibold">
-              <Activity className="h-4 w-4 text-primary" /> Live processing
+              <Activity className="h-4 w-4 text-primary" /> Verification & Accuracy
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              {verified} of {mandatory.length || "—"} mandatory documents verified
+              {verified} of {docs.length || "—"} documents verified · Upload more to increase accuracy
             </p>
           </div>
-          <p className="text-4xl font-semibold text-gradient">{readiness}%</p>
+          <div className="text-right">
+            <p className="text-4xl font-semibold text-gradient">{accuracyScore}%</p>
+            <span className="block text-[11px] font-medium text-muted-foreground">Accuracy Score</span>
+          </div>
         </div>
-        <Progress value={readiness} className="mt-4 h-2.5" />
+        <Progress value={accuracyScore} className="mt-4 h-2.5" />
         <div className="mt-4 flex flex-wrap gap-2 text-xs">
           <Badge variant="secondary" className="text-success">
             {verified} verified

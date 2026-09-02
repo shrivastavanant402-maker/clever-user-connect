@@ -268,7 +268,11 @@ export const verifyDocument = createServerFn({ method: "POST" })
     if (!data.file?.dataUrl) throw new Error("No file data provided");
     const b64Parts = data.file.dataUrl.split(",");
     const mimeType = b64Parts[0]?.split(":")[1]?.split(";")[0] ?? "application/octet-stream";
+<<<<<<< HEAD
     const b64Data = b64Parts[1];
+=======
+    const b64Data = b64Parts[1] ?? "";
+>>>>>>> 90d01e32d7d271b4d6fe8b833251ab774f644eaf
     
     if (!b64Data) throw new Error("Invalid base64 file data");
 

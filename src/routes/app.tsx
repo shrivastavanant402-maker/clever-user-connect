@@ -305,7 +305,7 @@ function AppPage() {
           <section className="rounded-3xl border border-[#eae8e3] bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.02)]">
             <div className="flex items-center justify-between">
               <h2 className="flex items-center gap-2 text-base font-bold text-[#0a0a0a]">
-                <ListChecks className="h-4 w-4 text-[#0a0a0a]" /> Required documents
+                <ListChecks className="h-4 w-4 text-[#0a0a0a]" /> Verification documents
               </h2>
               {requirements && (
                 <span className="rounded-full bg-[#f4f3ef] px-2.5 py-0.5 text-xs font-semibold text-[#0a0a0a]">
@@ -367,6 +367,15 @@ function AppPage() {
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                </div>
+
+                {/* Accuracy booster notification */}
+                <div className="mt-4 flex items-start gap-2.5 rounded-2xl border border-emerald-200/80 bg-emerald-50/60 p-3 text-xs text-emerald-900">
+                  <Sparkles className="h-4 w-4 shrink-0 text-emerald-600 mt-0.5" />
+                  <div className="leading-relaxed">
+                    <span className="font-semibold text-emerald-950">Accuracy Tip: </span>
+                    Upload any supporting documents you have. The more documents you upload, the higher your verification accuracy and fraud detection score!
                   </div>
                 </div>
 
