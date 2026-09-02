@@ -87,20 +87,32 @@ const gateway = async (body: any) => {
   }
 };
 
-const normalise = (r: ServiceRequirements): ServiceRequirements => ({
-  serviceName: r.serviceName || "Application",
-  authority: r.authority || "—",
-  overview: r.overview || "",
-  notes: r.notes ?? [],
-  documents: (r.documents ?? []).map((d, i) => ({
-    id: d.id || `doc-${i}`,
-    name: d.name,
-    description: d.description ?? "",
-    mandatory: false,
-    acceptedFormats: d.acceptedFormats ?? ["JPG", "PNG", "PDF"],
-    digilockerType: d.digilockerType ?? null,
-  })),
-});
+const normalise = (r: ServiceRequirements): ServiceRequirements => {
+  const seen = new Set<string>();
+  const documents = (r.documents ?? [])
+    .filter((d) => {
+      const key = (d?.name ?? "").trim().toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .map((d, i) => ({
+      id: d.id || `doc-${i}`,
+      name: d.name,
+      description: d.description ?? "",
+      mandatory: false,
+      acceptedFormats: d.acceptedFormats ?? ["JPG", "PNG", "PDF"],
+      digilockerType: d.digilockerType ?? null,
+    }));
+
+  return {
+    serviceName: r.serviceName || "Application",
+    authority: r.authority || "—",
+    overview: r.overview || "",
+    notes: r.notes ?? [],
+    documents,
+  };
+};
 
 const PRESET_REQUIREMENTS: Record<string, ServiceRequirements> = {
   passport: {
