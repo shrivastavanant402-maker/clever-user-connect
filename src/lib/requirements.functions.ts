@@ -87,20 +87,32 @@ const gateway = async (body: any) => {
   }
 };
 
-const normalise = (r: ServiceRequirements): ServiceRequirements => ({
-  serviceName: r.serviceName || "Application",
-  authority: r.authority || "—",
-  overview: r.overview || "",
-  notes: r.notes ?? [],
-  documents: (r.documents ?? []).map((d, i) => ({
-    id: d.id || `doc-${i}`,
-    name: d.name,
-    description: d.description ?? "",
-    mandatory: false,
-    acceptedFormats: d.acceptedFormats ?? ["JPG", "PNG", "PDF"],
-    digilockerType: d.digilockerType ?? null,
-  })),
-});
+const normalise = (r: ServiceRequirements): ServiceRequirements => {
+  const seen = new Set<string>();
+  const documents = (r.documents ?? [])
+    .filter((d) => {
+      const key = (d?.name ?? "").trim().toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .map((d, i) => ({
+      id: d.id || `doc-${i}`,
+      name: d.name,
+      description: d.description ?? "",
+      mandatory: false,
+      acceptedFormats: d.acceptedFormats ?? ["JPG", "PNG", "PDF"],
+      digilockerType: d.digilockerType ?? null,
+    }));
+
+  return {
+    serviceName: r.serviceName || "Application",
+    authority: r.authority || "—",
+    overview: r.overview || "",
+    notes: r.notes ?? [],
+    documents,
+  };
+};
 
 const PRESET_REQUIREMENTS: Record<string, ServiceRequirements> = {
   passport: {
@@ -421,7 +433,14 @@ export const scanFormRequirements = createServerFn({ method: "POST" })
             content: [
               {
                 type: "text",
-                text: `Read this application form. Identify which service/scheme it is for and the issuing authority, then list every supporting document an applicant must attach with it, in ${data.language}. Include documents implied by the form's declarations and annexures.
+                text: `Read this application form. Identify which service/scheme it is for and the issuing authority, then list ONLY the supporting documents that the form itself explicitly names as required attachments, in ${data.language}.
+
+STRICT RULES:
+- Transcribe the form's own checklist/"documents to be enclosed" section verbatim. Do NOT add documents from general knowledge of the scheme.
+- Do NOT invent, infer, expand or split entries. If the form lists 2 documents, return exactly 2 documents.
+- If one line offers alternatives (e.g. "Aadhaar / Voter ID"), keep it as ONE document entry.
+- Never merge duplicates into extra entries; never append photographs, declarations or annexures unless the form explicitly lists them as attachments to enclose.
+- If the form names no attachments at all, return an empty documents array.
 
 Return ONLY minified JSON matching:
 ${SHAPE}`,
