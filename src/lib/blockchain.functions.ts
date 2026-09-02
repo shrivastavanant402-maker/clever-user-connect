@@ -14,17 +14,17 @@ function getArtifact() {
 }
 
 function getEthers() {
-  const mode = process.env.BLOCKCHAIN_MODE || "local";
+  const mode = process.env["BLOCKCHAIN_MODE"] || "local";
   
   let rpcUrl = "";
   let privateKey = "";
   
   if (mode === "local") {
-    rpcUrl = process.env.LOCAL_RPC_URL || "http://127.0.0.1:8545";
-    privateKey = process.env.LOCAL_PRIVATE_KEY || "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+    rpcUrl = process.env["LOCAL_RPC_URL"] || "http://127.0.0.1:8545";
+    privateKey = process.env["LOCAL_PRIVATE_KEY"] || "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
   } else {
-    rpcUrl = process.env.AMOY_RPC_URL || "";
-    privateKey = process.env.PRIVATE_KEY || "";
+    rpcUrl = process.env["AMOY_RPC_URL"] || "";
+    privateKey = process.env["PRIVATE_KEY"] || "";
   }
   
   if (!rpcUrl || !privateKey) {
@@ -75,7 +75,7 @@ export const registerDocumentFn = createServerFn({ method: "POST" })
     try {
       const artifact = getArtifact();
       const { signer, mode } = getEthers();
-      const contract = new ethers.Contract(data.contractAddress, artifact.abi, signer);
+      const contract = new ethers.Contract(data.contractAddress, artifact.abi, signer) as any;
       
       const idBytes32 = ethers.id(data.documentId);
       const hashParam = data.documentHash.startsWith('0x') ? data.documentHash : `0x${data.documentHash}`;
@@ -101,7 +101,7 @@ export const verifyOnChainFn = createServerFn({ method: "POST" })
     try {
       const artifact = getArtifact();
       const { provider } = getEthers();
-      const contract = new ethers.Contract(data.contractAddress, artifact.abi, provider);
+      const contract = new ethers.Contract(data.contractAddress, artifact.abi, provider) as any;
       
       const idBytes32 = ethers.id(data.documentId);
       const hashParam = data.suppliedHash.startsWith('0x') ? data.suppliedHash : `0x${data.suppliedHash}`;
@@ -124,7 +124,7 @@ export const revokeDocumentFn = createServerFn({ method: "POST" })
     try {
       const artifact = getArtifact();
       const { signer, mode } = getEthers();
-      const contract = new ethers.Contract(data.contractAddress, artifact.abi, signer);
+      const contract = new ethers.Contract(data.contractAddress, artifact.abi, signer) as any;
       
       const idBytes32 = ethers.id(data.documentId);
       
@@ -148,7 +148,7 @@ export const createVersionFn = createServerFn({ method: "POST" })
     try {
       const artifact = getArtifact();
       const { signer, mode } = getEthers();
-      const contract = new ethers.Contract(data.contractAddress, artifact.abi, signer);
+      const contract = new ethers.Contract(data.contractAddress, artifact.abi, signer) as any;
       
       const idBytes32 = ethers.id(data.documentId);
       const hashParam = data.newHash.startsWith('0x') ? data.newHash : `0x${data.newHash}`;
